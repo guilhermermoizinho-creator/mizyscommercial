@@ -283,5 +283,65 @@ class TestRobustez(unittest.TestCase):
         self.assertEqual(calculo.confere(c), [])
 
 
+class TestEncargosContraACCT(unittest.TestCase):
+    """Amarra o motor à TABELA DE ENCARGOS SOCIAIS MÍNIMO da CCT do SIEMACO-SP
+    (cláusula septagésima segunda, CCT 2026/2027, MTE SP003552/2026).
+
+    A convenção publica 79,5243% e esse número engana: é o TOTAL de seis
+    grupos, e quatro deles o sistema já cobra em módulos próprios. Quem digitar
+    79,5243 no campo de encargos paga 13º duas vezes, rescisão duas vezes e
+    férias duas vezes — o preço sobe uns 40% e continua parecendo legítimo,
+    porque o número veio da convenção.
+
+    O campo de encargos é só o **submódulo 2.2**, que corresponde ao GRUPO A.
+    """
+
+    # Os seis grupos, exatamente como estão impressos na convenção.
+    GRUPO_A = 36.8000    # Previdência 20 + SESI 1,5 + SENAI 1 + INCRA 0,2
+    #                      + SEBRAE 0,6 + sal.-educação 2,5 + RAT 3 + FGTS 8
+    GRUPO_B = 12.8737    # tempo remunerado e não trabalhado
+    GRUPO_C = 12.4345    # adicional de férias e 13º
+    GRUPO_D = 7.0477     # obrigações rescisórias
+    GRUPO_E = 1.4904     # aprovisionamento de casos especiais
+    GRUPO_F = 8.8780     # incidências cumulativas
+    TOTAL_CCT = 79.5243
+
+    def test_os_grupos_somam_o_total_publicado(self):
+        soma = (self.GRUPO_A + self.GRUPO_B + self.GRUPO_C
+                + self.GRUPO_D + self.GRUPO_E + self.GRUPO_F)
+        self.assertAlmostEqual(soma, self.TOTAL_CCT, places=4)
+
+    def test_submodulo_2_2_e_o_grupo_a(self):
+        """RAT 3% (limpeza é grau de risco 3) e FAP 1,0."""
+        enc = calculo.encargos_regime("presumido", 3.0)
+        self.assertAlmostEqual(enc["total"], self.GRUPO_A, places=4)
+
+    def test_simples_anexo_iv_e_isento_de_terceiros(self):
+        """5,80 p.p. sobre toda a folha — costuma valer mais que a margem."""
+        presumido = calculo.encargos_regime("presumido", 3.0)
+        simples = calculo.encargos_regime("simples", 3.0)
+        self.assertAlmostEqual(presumido["total"] - simples["total"], 5.80, places=4)
+        self.assertTrue(simples["terceiros_isento"])
+
+    def test_modulo_3_fica_na_ordem_do_grupo_d(self):
+        """A rescisão é calibrada pelo turnover, mas não pode fugir da CCT."""
+        m3 = calculo.modulo3(60.0, self.GRUPO_A)
+        self.assertLess(m3["pct"], self.GRUPO_D * 1.5)
+        self.assertGreater(m3["pct"], self.GRUPO_D * 0.5)
+
+    def test_nao_ha_dupla_contagem_com_o_total_da_cct(self):
+        """Somados, os módulos que replicam os grupos B..F não passam do que a
+        própria convenção considera mínimo. Passar significaria cobrar duas
+        vezes a mesma obrigação."""
+        s21 = 11.11                                    # 13º + 1/3 de férias
+        m3 = calculo.modulo3(60.0, self.GRUPO_A)["pct"]
+        m4 = calculo.modulo4(3.5, self.GRUPO_A)["pct"]
+        replicado = s21 + m3 + m4
+        teto = self.GRUPO_B + self.GRUPO_C + self.GRUPO_D + self.GRUPO_E + self.GRUPO_F
+        self.assertLess(replicado, teto,
+                        "os módulos somam %.2f%%, acima dos %.2f%% que a CCT "
+                        "cobra fora do Grupo A" % (replicado, teto))
+
+
 if __name__ == "__main__":
     unittest.main()

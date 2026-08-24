@@ -748,7 +748,12 @@ function cartaoIdentificacao(p, congelada, lead){
      </div></div>
     <div class="f" style="flex:2 1 190px">
      <label title="Define cargos, salários e benefícios de todos os postos">Convenção coletiva</label>
-     <select data-mudar="trocarCCT" ${trava}>${optsReg(DB.list('ccts'), p.cctId, x => x.nome)}</select></div>
+     <select data-mudar="trocarCCT" ${trava}>${optsReg(
+       /* Só as convenções ativas — mais a que esta proposta já usa, senão
+          trocar de aba apagaria a escolha de uma proposta antiga. Mesma regra
+          do seletor por posto, que já filtrava assim. */
+       DB.list('ccts').filter(x => x.ativo || +x.id === +p.cctId),
+       p.cctId, x => x.nome)}</select></div>
     <div class="f" style="flex:1 1 130px"><label>Situação</label>
      <select data-mudar="trocarStatus">${optsLista('proposta_status', p.status)}</select></div>
    </div>
@@ -1040,9 +1045,11 @@ function linhaPosto(p, it, ix, cargos, benefs, congelada, ciPronto){
 
    <div class="sublabel">Benefícios da convenção</div>
    <div class="chips">${benefs.length ? benefs.map(b => `
-    <label class="chipbox ${(it.beneficios || []).includes(b.id) ? 'on' : ''}">
+    <label class="chipbox ${(it.beneficios || []).includes(b.id) ? 'on' : ''}"
+     ${b.condicional ? 'title="A convenção condiciona este benefício: só marque se o posto se enquadra."' : ''}>
      <input type="checkbox" ${(it.beneficios || []).includes(b.id) ? 'checked' : ''} ${trava}
       data-mudar="alternarBeneficio" data-ix="${ix}" data-bid="${b.id}">${esc(b.nome)}
+     ${b.condicional ? '<span class="tag t-amber">se aplicável</span>' : ''}
      <span class="pv">${money0(b.valor)}${b.unid === 'dia' ? '/dia' : ''}</span></label>`).join('')
     : '<span style="font-size:12.5px;color:var(--muted)">Nenhum benefício cadastrado nesta CCT.</span>'}</div>
 
@@ -1743,10 +1750,14 @@ acoes({
     const itens = [{
       cargoId:cargos[0]?.id ?? null, cctId:p.cctId ?? null,
       escalaId:escala?.id ?? null, turnoId:turno?.id ?? null,
-      /* TODOS os benefícios da convenção, não os dois primeiros. Benefício de
-         CCT é obrigação, não escolha comercial: quem monta desmarca o que não
-         se aplica, em vez de caçar um por um o que a lei já manda pagar. */
-      qtd:1, adicionais:[], a20:20, beneficios:benefs.map(b => b.id), obs:''}]
+      /* Os benefícios da convenção, menos os CONDICIONAIS. Benefício de CCT é
+         obrigação, não escolha comercial: quem monta desmarca o que não se
+         aplica, em vez de caçar um por um o que a lei já manda pagar.
+         A exceção são os que a própria convenção condiciona — o auxílio-creche
+         é devido à empregada-mãe, em empresa com 30+ mulheres, por filho de até
+         24 meses. Entrando por cabeça ele somava 10,5% ao preço do posto. */
+      qtd:1, adicionais:[], a20:20,
+      beneficios:benefs.filter(b => !b.condicional).map(b => b.id), obs:''}]
       .concat(p.itens || []);
     await DB.upd('propostas', state.id, {itens});
     render();
