@@ -181,14 +181,64 @@ def cnpj_valido(cnpj: str) -> bool:
     return True
 
 
+# Telefone brasileiro escrito como gente escreve: (11) 4002-8922, 11 98765-4321,
+# +55 11 3000 0000.
+RE_TEL = re.compile(r"(?:\+?55[\s.-]?)?\(?([1-9][0-9])\)?[\s.-]?(9?[0-9]{4})[\s.-]?([0-9]{4})(?!\d)")
+
+# Os DDDs que existem de verdade. Sem esta lista, o CNPJ 57.559.387/0001-38 do
+# rodapé virava o telefone "(57) 6789-0004" — a Anatel não usa 20, 23, 25, 26,
+# 29, 30, 36 (existe), 39, 40, 50, 52, 56, 57, 58, 59, 60, 70, 72, 76, 78, 80 e 90.
+DDDS = {11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 24, 27, 28,
+        31, 32, 33, 34, 35, 37, 38, 41, 42, 43, 44, 45, 46, 47, 48, 49,
+        51, 53, 54, 55, 61, 62, 63, 64, 65, 66, 67, 68, 69,
+        71, 73, 74, 75, 77, 79, 81, 82, 83, 84, 85, 86, 87, 88, 89,
+        91, 92, 93, 94, 95, 96, 97, 98, 99}
+
+# Corridas longas de dígito — CNPJ, CPF, código de barras, id de rastreador —
+# são apagadas ANTES da busca por telefone. Telefone tem 10 ou 11 dígitos; o
+# que tem 12 ou mais nunca é telefone, mas contém um por dentro.
+RE_DIGITADA_LONGA = re.compile(r"\d[\d.\-/]{11,}\d")
+
+# Perfis de rede social. `company/` e `in/` do LinkedIn são coisas diferentes:
+# o primeiro é a empresa, o segundo é uma pessoa — e pessoa não entra aqui.
+REDES = {
+    "instagram": re.compile(r"https?://(?:www\.)?instagram\.com/([A-Za-z0-9_.]{2,30})", re.I),
+    "facebook": re.compile(r"https?://(?:www\.)?facebook\.com/([A-Za-z0-9_.-]{3,60})", re.I),
+    "linkedin": re.compile(r"https?://(?:[a-z]{2,3}\.)?linkedin\.com/company/([A-Za-z0-9_.-]{2,80})", re.I),
+    "youtube": re.compile(r"https?://(?:www\.)?youtube\.com/(?:c/|@|channel/|user/)([A-Za-z0-9_.-]{2,60})", re.I),
+    "whatsapp": re.compile(r"(?:wa\.me/|api\.whatsapp\.com/send\?phone=)(\+?\d{10,15})", re.I),
+}
+# Caminhos que não são perfil de ninguém: são o botão de compartilhar.
+REDE_LIXO = ("sharer", "share.php", "intent", "plugins", "tr?id", "login",
+             "profile.php", "dialog", "p", "explore", "hashtag")
+
+
+def _telefone_plausivel(meio: str) -> bool:
+    """O plano de numeração brasileiro, aplicado ao bloco depois do DDD.
+
+    Celular tem 9 dígitos e começa com 9. Fixo tem 8 e começa de 2 a 5. Sem
+    isto entrava "(17) 8654-7485" e "(71) 1536-3924", que são pedaços de outros
+    números com um DDD válido por acaso na frente.
+    """
+    if len(meio) == 5:
+        return meio[0] == "9"
+    if len(meio) == 4:
+        return meio[0] in "2345"
+    return False
+
+
 def ler_site(url: str, paginas_extras=("/contato", "/fale-conosco", "/sobre")) -> dict:
-    """Puxa o CNPJ e os e-mails do site. Falha em silêncio: site fora do ar
-    não pode derrubar a busca inteira."""
-    achado = {"cnpjs": [], "emails": [], "erro": ""}
+    """Puxa CNPJ, e-mails, telefones e redes sociais do site da empresa.
+
+    Falha em silêncio: site fora do ar não pode derrubar a rodada inteira. A
+    página inicial quase nunca tem tudo — o CNPJ mora no rodapé, o e-mail e o
+    telefone na página de contato — por isso a varredura tenta as duas.
+    """
+    achado = {"cnpjs": [], "emails": [], "telefones": [], "redes": {}, "erro": ""}
     if not url:
         return achado
     base = url.rstrip("/")
-    vistos_c, vistos_e = [], []
+    vistos_c, vistos_e, vistos_t = [], [], []
     for sufixo in ("",) + tuple(paginas_extras):
         try:
             _, corpo = _http(base + sufixo, timeout=20, limite=500000)
@@ -206,10 +256,33 @@ def ler_site(url: str, paginas_extras=("/contato", "/fale-conosco", "/sobre")) -
             if any(x in e for x in EMAIL_LIXO) or e in vistos_e:
                 continue
             vistos_e.append(e)
-        if vistos_c:
-            break          # achou o CNPJ, não precisa varrer o resto
+        limpo = RE_DIGITADA_LONGA.sub(" ", html)
+        for ddd, meio, fim in RE_TEL.findall(limpo):
+            if int(ddd) not in DDDS or not _telefone_plausivel(meio):
+                continue
+            t = "(%s) %s-%s" % (ddd, meio, fim)
+            if t not in vistos_t:
+                vistos_t.append(t)
+        for rede, regex in REDES.items():
+            if rede in achado["redes"]:
+                continue
+            for alvo in regex.findall(html):
+                if alvo.lower() in REDE_LIXO or len(alvo) < 2:
+                    continue
+                achado["redes"][rede] = alvo
+                break
+        # Só para com CNPJ E e-mail nas mãos. Parar no telefone seria parar na
+        # home, e o e-mail comercial quase sempre mora na página de contato —
+        # foi assim que os três primeiros testes voltaram sem e-mail nenhum.
+        if vistos_c and vistos_e:
+            break
     achado["cnpjs"] = vistos_c[:3]
+    # E-mail comercial primeiro: comercial@, vendas@, contato@ valem mais que
+    # o financeiro@ e o rh@ que costumam vir junto no rodapé.
+    ordem = ("comercial", "vendas", "contato", "atendimento", "sac", "faleconosco")
+    vistos_e.sort(key=lambda e: next((i for i, p in enumerate(ordem) if e.startswith(p)), 99))
     achado["emails"] = vistos_e[:5]
+    achado["telefones"] = vistos_t[:4]
     return achado
 
 
@@ -377,6 +450,8 @@ def triar(cand: dict, bloqueio=None) -> dict:
         sinais.append("porte %s" % rf["porte"].lower())
     if cand.get("avaliacoes"):
         sinais.append("%d avaliações no Maps" % cand["avaliacoes"])
+    if cand.get("redes"):
+        sinais.append("redes: " + ", ".join(sorted(cand["redes"])))
     if rf.get("socios"):
         sinais.append("%d sócio(s)" % rf["socios"])
 
@@ -390,8 +465,12 @@ def triar(cand: dict, bloqueio=None) -> dict:
         nota += 10
     if cand.get("emails"):
         nota += 10
-    if cand.get("telefone") or rf.get("telefone_rf"):
+    if cand.get("telefone") or cand.get("telefones") or rf.get("telefone_rf"):
         nota += 10
+    # Empresa com LinkedIn de empresa costuma ter quadro formal e RH — sinal
+    # fraco de porte, mas o único de graça, e ajuda a ordenar a fila.
+    if (cand.get("redes") or {}).get("linkedin"):
+        nota += 5
     if idade is not None and idade >= 3:
         nota += 5
     if 200000 <= cap < 5e6:
@@ -443,6 +522,10 @@ def rodar_lote(linhas, bloqueio=None, limite=60, log=None) -> dict:
             cand["site"] = dado if dado.lower().startswith("http") else "https://" + dado
             achado = ler_site(cand["site"])
             cand["emails"] = achado["emails"]
+            cand["redes"] = achado["redes"]
+            cand["telefones"] = achado["telefones"]
+            if achado["telefones"]:
+                cand["telefone"] = achado["telefones"][0]
             cand["cnpj_site"] = achado["cnpjs"][0] if achado["cnpjs"] else ""
             if achado["erro"]:
                 cand["erro_site"] = achado["erro"]
@@ -497,6 +580,10 @@ def rodar(regiao: str, termos=None, maximo_por_termo=20, enriquecer=True,
         for c in candidatos:
             achado = ler_site(c.get("site"))
             c["emails"] = achado["emails"]
+            c["redes"] = achado["redes"]
+            # O telefone do Maps vem primeiro: é o que a empresa escolheu
+            # publicar como principal. Os do site entram como alternativa.
+            c["telefones"] = [x for x in achado["telefones"] if x != c.get("telefone")]
             c["cnpj_site"] = achado["cnpjs"][0] if achado["cnpjs"] else ""
             if achado["erro"]:
                 c["erro_site"] = achado["erro"]

@@ -122,5 +122,59 @@ class TestLeituraDeSite(unittest.TestCase):
             self.assertTrue(any(t in lixo for t in P.EMAIL_LIXO), lixo)
 
 
+class TestTelefone(unittest.TestCase):
+    """O rodapé de um site é um campo minado de números que parecem telefone.
+
+    Os dois falsos positivos que motivaram cada regra estão nos testes: o CNPJ
+    57.559.387/0001-38 saía como "(57) 6789-0004", e um id qualquer saía como
+    "(17) 8654-7485". Nenhum dos dois é telefone, e os dois iam para a coluna
+    de contato do lead.
+    """
+
+    def test_plano_de_numeracao(self):
+        # Celular: 9 dígitos começando em 9. Fixo: 8 começando de 2 a 5.
+        for meio, ok in (("98765", True), ("99999", True), ("3393", True),
+                         ("2678", True), ("5000", True),
+                         ("8654", False), ("1536", False), ("12345", False),
+                         ("6000", False), ("789", False)):
+            self.assertEqual(P._telefone_plausivel(meio), ok, meio)
+
+    def test_ddd_precisa_existir(self):
+        for existe in (11, 17, 21, 47, 71, 85, 99):
+            self.assertIn(existe, P.DDDS)
+        for nao_existe in (10, 20, 23, 25, 26, 29, 52, 57, 90):
+            self.assertNotIn(nao_existe, P.DDDS)
+
+    def test_cnpj_no_rodape_nao_vira_telefone(self):
+        """A corrida longa de dígitos é apagada antes da busca por telefone."""
+        html = 'CNPJ 57.559.387/0001-38 — fone (11) 3393-1717'
+        limpo = P.RE_DIGITADA_LONGA.sub(" ", html)
+        achados = [(d, m, f) for d, m, f in P.RE_TEL.findall(limpo)
+                   if int(d) in P.DDDS and P._telefone_plausivel(m)]
+        self.assertEqual(achados, [("11", "3393", "1717")])
+
+
+class TestRedesSociais(unittest.TestCase):
+
+    def test_pega_o_perfil_da_empresa(self):
+        html = ('<a href="https://www.instagram.com/minhaempresa">insta</a>'
+                '<a href="https://br.linkedin.com/company/minha-empresa">in</a>'
+                '<a href="https://wa.me/5511999998888">zap</a>')
+        achados = {r: rx.findall(html)[0] for r, rx in P.REDES.items() if rx.findall(html)}
+        self.assertEqual(achados.get("instagram"), "minhaempresa")
+        self.assertEqual(achados.get("linkedin"), "minha-empresa")
+        self.assertEqual(achados.get("whatsapp"), "5511999998888")
+
+    def test_linkedin_de_pessoa_nao_entra(self):
+        """`/in/` é gente, `/company/` é empresa. Prospecção quer a empresa."""
+        html = '<a href="https://linkedin.com/in/fulano-de-tal">perfil</a>'
+        self.assertEqual(P.REDES["linkedin"].findall(html), [])
+
+    def test_botao_de_compartilhar_nao_e_perfil(self):
+        html = '<a href="https://www.facebook.com/sharer/sharer.php?u=x">compartilhar</a>'
+        alvo = P.REDES["facebook"].findall(html)
+        self.assertTrue(not alvo or alvo[0].lower() in P.REDE_LIXO)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -624,6 +624,18 @@ def prospeccao_importar():
             repetidos.append(nome)
             continue
         emails = c.get("emails") or []
+        telefones = c.get("telefones") or []
+        # As redes viram texto na observação: o schema de leads não tem coluna
+        # para elas, e criar cinco colunas para um dado que ninguém filtra
+        # seria pior do que a linha de texto que o vendedor lê antes de ligar.
+        redes = c.get("redes") or {}
+        extra = []
+        if redes:
+            extra.append("redes: " + ", ".join("%s/%s" % kv for kv in sorted(redes.items())))
+        if len(emails) > 1:
+            extra.append("outros e-mails: " + ", ".join(emails[1:4]))
+        if telefones:
+            extra.append("outros telefones: " + ", ".join(telefones[:3]))
         novo = {
             "empresa": nome,
             "cnpj": cnpj or None,
@@ -632,9 +644,11 @@ def prospeccao_importar():
             "uf": rf.get("uf") or "",
             "site": c.get("site") or "",
             "contato_email": (emails[0] if emails else rf.get("email_rf") or ""),
-            "contato_telefone": c.get("telefone") or rf.get("telefone_rf") or "",
+            "contato_telefone": (c.get("telefone") or (telefones[0] if telefones else "")
+                                 or rf.get("telefone_rf") or ""),
+            "contato_telefone2": (telefones[1] if len(telefones) > 1 else ""),
             "origem": "Prospecção",
-            "obs": "; ".join(c.get("sinais") or []),
+            "obs": " · ".join((c.get("sinais") or []) + extra),
             "owner_id": g.usuario.get("id"),
         }
         try:

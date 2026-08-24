@@ -129,11 +129,17 @@ function _linha(c, marcadas){
       rel="noopener noreferrer">${esc(site.slice(0, 42))}</a></div>` : ''}
     ${c.erro_site ? '<div class="cell-sub">o site não abriu</div>' : ''}</td>
    <td>${c.telefone ? `<div class="cell-main">${esc(c.telefone)}</div>` : ''}
+    ${(c.telefones || []).slice(0, 2).map(t =>
+      `<div class="cell-sub">${esc(t)}</div>`).join('')}
     ${rf.telefone_rf && rf.telefone_rf !== c.telefone
       ? `<div class="cell-sub">${esc(rf.telefone_rf)} · Receita</div>` : ''}
-    ${emails.map(e => `<div class="cell-sub">${esc(e)}</div>`).join('')}
+    ${emails.slice(0, 3).map(e => `<div class="cell-sub">${esc(e)}</div>`).join('')}
     ${!emails.length && rf.email_rf
-      ? `<div class="cell-sub">${esc(rf.email_rf)} · Receita</div>` : ''}</td>
+      ? `<div class="cell-sub">${esc(rf.email_rf)} · Receita</div>` : ''}
+    ${Object.keys(c.redes || {}).length ? `<div style="margin-top:4px">
+      ${Object.entries(c.redes).map(([rede, alvo]) =>
+        `<a href="${esc(_urlRede(rede, alvo))}" target="_blank" rel="noopener noreferrer"
+          class="tag t-purple">${esc(rede)}</a> `).join('')}</div>` : ''}</td>
    <td>${rf.cnpj ? `<span class="tag ${rf.situacao === 'ATIVA' ? 't-green' : 't-red'}">
       ${esc(rf.situacao || '?')}</span>
      <div class="cell-sub">${esc(_cnpjFmt(rf.cnpj))}</div>
@@ -165,6 +171,16 @@ function _fichaCnpj(d){
 
 const _cnpjFmt = n => String(n || '').replace(
   /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+
+/* O backend guarda só o identificador do perfil, não a URL: é o que sobrevive
+   a mudança de domínio e o que cabe numa observação de lead. A URL se remonta
+   aqui, na hora de virar link. */
+const _BASE_REDE = {
+  instagram:'https://instagram.com/', facebook:'https://facebook.com/',
+  linkedin:'https://linkedin.com/company/', youtube:'https://youtube.com/@',
+  whatsapp:'https://wa.me/',
+};
+const _urlRede = (rede, alvo) => (_BASE_REDE[rede] || '') + alvo;
 
 
 /* ── ações ───────────────────────────────────────────────────────────────── */
