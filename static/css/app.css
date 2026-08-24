@@ -25,6 +25,14 @@
      mexer em uma linha de JS. --white deixou de ser branco e virou "a
      superfície" — o nome ficou, o valor não.
 
+     REVISÃO DE 24/08/2026 — o monocromático foi longe demais. A paleta tinha
+     virado um violeta só: os estados ficavam a 7 graus de matiz um do outro,
+     e o filete de botão e campo media 1,58:1 contra a superfície onde se
+     apoiava. Na prática, nada dizia o que era clicável nem o que era ganho e
+     o que era perdido. O violeta continua sendo a marca e a ação; o que
+     voltou foi o matiz nos três estados que precisam se opor, e um filete
+     próprio para o que se clica. Cada número está anotado onde foi mudado.
+
      Três degraus de superfície, e só três. --bg é o breu do fundo, --white é
      o bloco apoiado nele, --surface-2 é o rebaixo dentro do bloco (input,
      cabeçalho de tabela, coluna de kanban). Nenhum é cinza puro: os três
@@ -34,7 +42,16 @@
   --surface-2:#191826; /* rebaixo: input, cabeçalho de tabela, coluna   */
   --border:#242235;
   --border-forte:#39344F;
-  --text:#EEEBF7;--muted:#9E99B8;--faint:#6F6A8A;
+  /* O filete do que se CLICA. A WCAG pede 3:1 entre o contorno de um
+     componente e o que esta ao lado dele; --border-forte media 1,58 contra o
+     cartao, e era por isso que botao e campo sumiam dentro da superficie —
+     existia um retangulo, mas nada dizia que ele era clicavel. Este mede 3,42.
+     --border e --border-forte seguem no que e divisoria, onde 3:1 nao se
+     aplica: linha de tabela, separador, moldura decorativa. */
+  --border-ui:#6B6395;
+  /* --faint media 3,42:1 sobre o rebaixo, abaixo dos 4,5 que texto
+     pequeno exige. Em 8A83AB mede 4,93 e continua sendo o tom apagado. */
+  --text:#EEEBF7;--muted:#9E99B8;--faint:#8A83AB;
   /* --inv é a tinta que vai POR CIMA de um bloco preenchido em --text. */
   --inv:#0B0A12;
   /* --accent* preenche, --blue* escreve. No escuro os dois NÃO podem ser o
@@ -52,13 +69,28 @@
   --blue-50:rgba(139,92,246,.07);   /* fundo de destaque              */
   --blue-100:rgba(139,92,246,.16);  /* fundo de badge                 */
   --blue-200:rgba(139,92,246,.42);  /* borda de destaque              */
-  /* Semânticos, dentro da mesma família. O contraste entre estados não vem do
-     matiz e sim do peso: preenchido = forte, contornado = neutro, tracejado =
-     negativo. Ver as classes .t-* mais abaixo. */
-  --green:#C9B4FF;--green-bg:rgba(139,92,246,.16);
-  --amber:#B79CFF;--amber-bg:rgba(139,92,246,.07);
-  --red:#9E99B8;--red-bg:rgba(139,92,246,.07);
-  --purple:#9E99B8;--purple-bg:rgba(139,92,246,.07);
+  /* ── Semânticos: aqui o MATIZ volta a trabalhar ─────────────────────────
+     A versão anterior tentava separar os estados só pelo peso — preenchido =
+     forte, contornado = neutro, tracejado = negativo — mantendo todos no mesmo
+     violeta. Medido, o resultado era este: "aprovada" e "perdida" ficavam a
+     7,1 graus de matiz uma da outra, e --red e --purple eram o MESMO hex. Numa
+     lista de quarenta propostas ninguém achava a perdida sem ler palavra por
+     palavra, que é justamente o trabalho que a cor deveria poupar.
+
+     O olho lê matiz antes de forma. Então os três estados que precisam se opor
+     ganham matiz próprio, e a distância mínima entre eles passou de 7 para 47
+     graus. Todos medidos sobre o bloco #12111C, todos acima de 4,5:1:
+
+       jade   #4ADE9F  10,9:1  ganho, ativo, margem folgada
+       âmbar  #F0B45C  10,1:1  atenção, no limite, não salvo
+       rosa   #F98098   7,6:1  perdido, vencido, margem abaixo do mínimo
+
+     O violeta continua sendo a marca e a AÇÃO — ele não vira mais um estado.
+     Cinza segue como neutro: separa por saturação, não por matiz. */
+  --green:#4ADE9F;--green-bg:rgba(74,222,159,.14);--green-bd:rgba(74,222,159,.38);
+  --amber:#F0B45C;--amber-bg:rgba(240,180,92,.14);--amber-bd:rgba(240,180,92,.38);
+  --red:#F98098;--red-bg:rgba(249,128,152,.14);--red-bd:rgba(249,128,152,.38);
+  --purple:#B79CFF;--purple-bg:rgba(139,92,246,.12);
   /* No escuro a sombra quase não trabalha — o que separa um bloco do fundo é
      o filete e um fio de luz na quina de cima. A sombra só afunda o bloco. */
   --shadow:0 1px 2px rgba(0,0,0,.55),0 1px 1px rgba(0,0,0,.35);
@@ -229,11 +261,18 @@ input[type=number],.tabnum{font-variant-numeric:tabular-nums;
 .page{padding:22px 26px 48px;flex:1}
 
 /* COMPONENTES */
+/* O fundo e --surface-2, e nao --white, porque --white e a cor do cartao e da
+   tela de login: o botao secundario ficava com o mesmo fundo da superficie em
+   que se apoia e so um filete de 1px o denunciava. Lido de relance, parecia
+   texto. O rebaixo levanta o botao sem precisar de cor de acao. */
 .btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:var(--r-sm);
-  border:1px solid var(--border-forte);background:var(--white);color:var(--text);font-weight:600;
+  border:1px solid var(--border-ui);background:#252338;color:var(--text);font-weight:600;
   font-size:13.5px;cursor:pointer;transition:.15s;white-space:nowrap;box-shadow:var(--shadow)}
 .btn svg{width:15px;height:15px;stroke-width:2;fill:none}
-.btn:hover{background:var(--blue-50);border-color:var(--blue-200);color:var(--accent-700)}
+/* O hover pintava o texto de --accent-700, um violeta ESCURO — sobra do tempo
+   em que o botao era branco. Sobre o botao escuro dava 2,15:1: passar o mouse
+   APAGAVA o rotulo. Agora clareia, que e o que hover faz no escuro. */
+.btn:hover{background:#2E2B45;border-color:var(--blue);color:var(--blue-600)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 /* A primária é o Lapis inteiro, com um filete branco no topo (a luz batendo na
    quina). É o único botão colorido da tela — por isso não precisa de mais nada
@@ -281,12 +320,15 @@ input[type=number],.tabnum{font-variant-numeric:tabular-nums;
 .tag{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;
   padding:2px 8px;border-radius:3px;white-space:nowrap;border:1px solid transparent;
   letter-spacing:.005em}
-.t-green{background:var(--accent);color:var(--on-accent);border-color:var(--accent-600);font-weight:700}
+/* Mesma forma para todas, matiz diferente em cada: assim a etiqueta é lida de
+   longe pela cor e de perto pela palavra. Antes a forma carregava o significado
+   sozinha (cheia/vazia/tracejada) e obrigava a ler para saber o que era. */
+.t-green{background:var(--green-bg);color:var(--green);border-color:var(--green-bd)}
+.t-amber{background:var(--amber-bg);color:var(--amber);border-color:var(--amber-bd)}
+.t-red{background:var(--red-bg);color:var(--red);border-color:var(--red-bd)}
 .t-blue{background:var(--blue-100);color:var(--blue-600);border-color:var(--blue-200)}
-.t-amber{background:var(--white);color:var(--blue);border-color:var(--blue-200)}
-.t-red{background:var(--white);color:var(--muted);border-style:dashed;border-color:var(--border-forte)}
-.t-purple{background:var(--blue-50);color:var(--muted);border-color:var(--border)}
-.t-gray{background:var(--surface-2);color:var(--faint);border-color:var(--border)}
+.t-purple{background:var(--purple-bg);color:var(--blue);border-color:var(--blue-200)}
+.t-gray{background:var(--surface-2);color:var(--muted);border-color:var(--border)}
 table{width:100%;border-collapse:collapse}
 /* .09em em 11px maiúsculo: caixa alta pede espaçamento, senão as hastes se
    encostam. O valor sobe com a caixa e desce com o corpo — é o mesmo número
@@ -433,8 +475,11 @@ tbody tr:last-child td{border-bottom:none}
 .f{display:flex;flex-direction:column;gap:5px}
 .f.full{grid-column:1/-1}
 .f label{font-size:12px;font-weight:600;color:var(--muted)}
-.f input,.f select,.f textarea{height:38px;border:1px solid var(--border-forte);border-radius:var(--r-sm);
-  padding:0 11px;background:var(--white);color:var(--text);transition:.15s}
+/* O campo tinha o fundo do cartao e um filete de 1,58:1 — dois retangulos da
+   mesma cor, um dentro do outro. Agora o fundo e o rebaixo e o filete e o de
+   componente: o campo vira um poco, que e o que a mao procura para digitar. */
+.f input,.f select,.f textarea{height:38px;border:1px solid var(--border-ui);border-radius:var(--r-sm);
+  padding:0 11px;background:var(--surface-2);color:var(--text);transition:.15s}
 .f input::placeholder,.f textarea::placeholder,.toolbar input::placeholder{color:var(--faint)}
 .f input:disabled,.f select:disabled,.f textarea:disabled{color:var(--muted);
   background:var(--surface-2);border-style:dashed;cursor:not-allowed}
@@ -442,12 +487,15 @@ tbody tr:last-child td{border-bottom:none}
 .f textarea{height:auto;min-height:80px;padding:9px 11px;resize:vertical}
 .f input:focus,.f select:focus,.f textarea:focus{outline:none;border-color:var(--blue);
   box-shadow:var(--ring)}
-/* Sem vermelho para o erro, o campo inválido é marcado por borda de tinta
-   cheia mais um filete interno — fica evidente ao lado dos campos de borda
-   azul-clara. */
-.f .err{font-size:11.5px;color:var(--text);font-weight:700;display:none}
+/* O erro do campo era da cor do texto comum: a mensagem que diz "isto esta
+   errado" saia igual ao rotulo do campo ao lado. Agora usa o rosa dos estados
+   negativos, o mesmo do #authErr e da etiqueta .t-red. */
+.f .err{font-size:11.5px;color:var(--red);font-weight:700;display:none}
 .f .err::before{content:'! ';font-weight:800}
-.f.invalid input,.f.invalid select{border-color:var(--text);box-shadow:inset 0 0 0 1px var(--text)}
+/* Borda branca marcava "invalido" com a mesma tinta do texto — o campo com
+   erro ficava parecido com o campo em foco. O rosa e o mesmo dos outros
+   negativos, e nao disputa com o violeta do foco. */
+.f.invalid input,.f.invalid select{border-color:var(--red);box-shadow:inset 0 0 0 1px var(--red)}
 .f.invalid .err{display:block}
 .detail-head{display:flex;align-items:center;gap:14px;margin-bottom:18px}
 .detail-head .avatar{width:48px;height:48px;border-radius:var(--r);font-size:16px}
@@ -482,9 +530,13 @@ tbody tr:last-child td{border-bottom:none}
    corpo inteiro — é a assinatura da marca, e é ela que faz a porta de entrada
    e a casa combinarem mesmo com a casa sendo clara. */
 #authScreen{position:fixed;inset:0;background:var(--white);z-index:500;display:flex;overflow:hidden}
-/* Sem vermelho: o erro se destaca pelo filete aceso à esquerda do texto. */
-#authErr{display:none;color:var(--text);font-size:12.5px;font-weight:600;margin-top:12px;
-  border-left:2px solid var(--accent);padding-left:10px}
+/* O erro era da cor do texto comum, separado do resto so por um filete violeta
+   — o mesmo violeta de todo o resto da tela. Quem digitava a senha errada lia
+   uma frase que parecia legenda de campo. Agora ele tem o rosa dos estados
+   negativos e um fundo tingido: e a unica coisa vermelha da tela de entrada. */
+#authErr{display:none;color:var(--red);font-size:12.5px;font-weight:600;margin-top:12px;
+  background:var(--red-bg);border:1px solid var(--red-bd);border-left-width:3px;
+  border-radius:var(--r-sm);padding:9px 11px}
 
 /* ── Coluna esquerda: o campo de faíscas ─────────────────────────────────
    Aqui mora a mesma cena da tela inicial: breu, o arco de violeta cruzando o
