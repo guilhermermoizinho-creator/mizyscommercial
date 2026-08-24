@@ -1,0 +1,1158 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   Mizys CRM — folha de estilo.
+   Continua sendo um arquivo só porque é UM sistema visual: as variáveis do
+   :root são a fonte de tudo, e partir isso em cinco arquivos faria a paleta
+   viver em cinco lugares.
+   ════════════════════════════════════════════════════════════════════════════ */
+:root{
+  /* ── Paleta Noturno: breu · violeta · brasa ──────────────────────────────
+     O sistema saiu do papel branco e foi para o breu. A referência é a tela
+     de abertura: um fundo quase preto com um traço de violeta cruzando o alto
+     da página, e os cartões nascendo desse escuro em vez de serem recortados
+     nele. Num CRM de venda a tela fica horas aberta ao lado de um PDF e de uma
+     planilha — o escuro é o que faz a janela do sistema se separar das outras
+     sem gritar.
+
+       Breu      #08070E   a página
+       Bloco     #12111C   a superfície
+       Violeta   #8B5CF6   a ação
+       Brasa     #B388FF   o traço de luz
+       Névoa     #EEEBF7   o texto
+
+     Os nomes antigos (--white, --blue, --green, --amber, --red, --purple)
+     continuam existindo porque o JS que monta as telas referencia essas
+     variáveis em estilos inline. Trocar aqui muda o sistema inteiro, sem
+     mexer em uma linha de JS. --white deixou de ser branco e virou "a
+     superfície" — o nome ficou, o valor não.
+
+     Três degraus de superfície, e só três. --bg é o breu do fundo, --white é
+     o bloco apoiado nele, --surface-2 é o rebaixo dentro do bloco (input,
+     cabeçalho de tabela, coluna de kanban). Nenhum é cinza puro: os três
+     carregam violeta, e é isso que dá liga entre o fundo e o traço de luz. */
+  --bg:#08070E;        /* página                                       */
+  --white:#12111C;     /* superfície: cartão, trilho, topbar            */
+  --surface-2:#191826; /* rebaixo: input, cabeçalho de tabela, coluna   */
+  --border:#242235;
+  --border-forte:#39344F;
+  --text:#EEEBF7;--muted:#9E99B8;--faint:#6F6A8A;
+  /* --inv é a tinta que vai POR CIMA de um bloco preenchido em --text. */
+  --inv:#0B0A12;
+  /* --accent* preenche, --blue* escreve. No escuro os dois NÃO podem ser o
+     mesmo violeta: o #8B5CF6 tem contraste de sobra como fundo (com tinta
+     branca por cima) e de menos como texto, então o que escreve é o tom
+     clareado (--blue / --blue-600). */
+  --accent:#8B5CF6;    /* Violeta: botão primário, tag cheia, avatar  */
+  --accent-600:#7C3AED;/* Violeta fundo: hover e borda de preenchido  */
+  --accent-700:#6D28D9;/* o fundo do degradê de ação                  */
+  --on-accent:#FFFFFF; /* tinta sobre qualquer preenchimento          */
+  --accent-grad:linear-gradient(180deg,#9F73FF,#8B5CF6 58%,#7C3AED);
+  --blue:#B79CFF;      /* primária legível: número, link, gráfico     */
+  --blue-600:#CDB8FF;  /* primária hover / texto forte sobre tinto    */
+  --blue-500:#8B5CF6;  /* primária suave/gráfico                      */
+  --blue-50:rgba(139,92,246,.07);   /* fundo de destaque              */
+  --blue-100:rgba(139,92,246,.16);  /* fundo de badge                 */
+  --blue-200:rgba(139,92,246,.42);  /* borda de destaque              */
+  /* Semânticos, dentro da mesma família. O contraste entre estados não vem do
+     matiz e sim do peso: preenchido = forte, contornado = neutro, tracejado =
+     negativo. Ver as classes .t-* mais abaixo. */
+  --green:#C9B4FF;--green-bg:rgba(139,92,246,.16);
+  --amber:#B79CFF;--amber-bg:rgba(139,92,246,.07);
+  --red:#9E99B8;--red-bg:rgba(139,92,246,.07);
+  --purple:#9E99B8;--purple-bg:rgba(139,92,246,.07);
+  /* No escuro a sombra quase não trabalha — o que separa um bloco do fundo é
+     o filete e um fio de luz na quina de cima. A sombra só afunda o bloco. */
+  --shadow:0 1px 2px rgba(0,0,0,.55),0 1px 1px rgba(0,0,0,.35);
+  --shadow-lg:0 26px 50px -24px rgba(0,0,0,.85),0 8px 20px -12px rgba(0,0,0,.65);
+  --ring:0 0 0 3px rgba(139,92,246,.32);
+  /* O brilho: é o mesmo violeta da ação, só que espalhado. Toda vez que algo
+     precisa "acender" no sistema (botão primário, cartão sob o mouse, traço
+     da capa) é esta sombra que faz o trabalho. */
+  --glow:0 0 24px -6px rgba(139,92,246,.55);
+  /* ── Cantos ──────────────────────────────────────────────────────────────
+     Um raio para cartão e painel, um para tudo que é pequeno, e nada de
+     pílula. Canto muito redondo em interface densa amolece a grade inteira:
+     as bordas param de formar linha e cada elemento vira uma bolha solta.
+     Aqui a régua é quase reta e o alinhamento volta a aparecer. */
+  --r:10px;            /* cartão, modal, painel  */
+  --r-sm:6px;          /* botão, input, chip, tag */
+  --rail:62px;         /* largura do trilho de navegação */
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'IBM Plex Sans',-apple-system,'Segoe UI',Roboto,sans-serif;
+  /* O fundo não é preto chapado: são duas brumas de violeta muito diluídas —
+     uma no alto à direita, outra embaixo à esquerda — que dão à página um eixo
+     de luz. É esse eixo que faz os blocos parecerem apoiados em algo em vez de
+     recortados no vazio, e é o mesmo eixo do arco da tela inicial. fixed: a
+     bruma pertence à janela, não ao scroll. */
+  background:
+    radial-gradient(120% 78% at 84% -14%,rgba(139,92,246,.16),transparent 60%),
+    radial-gradient(96% 70% at -12% 108%,rgba(109,40,217,.13),transparent 62%),
+    var(--bg);
+  background-attachment:fixed;
+  color:var(--text);font-size:14px;line-height:1.5;display:flex;min-height:100vh;
+  /* No escuro o antialiasing de subpixel engorda o texto claro e devolve
+     aquela franja colorida na haste das letras. -webkit-font-smoothing é
+     remédio de tema escuro, e agora o tema é escuro. */
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+/* ── Números ─────────────────────────────────────────────────────────────
+   Regra única do sistema: todo número que o usuário compara com outro número
+   (coluna de tabela, KPI, total, quantidade) é tabular. Sem isso as casas não
+   se alinham verticalmente e a tabela financeira fica ilegível — e o valor
+   "dança" na largura toda vez que muda de 9 para 1. */
+td,th,.kpi .v,.kpi .d,.vl,.pr,.val,.sum,.n,.bfx-n,.badge,
+input[type=number],.tabnum{font-variant-numeric:tabular-nums;
+  font-feature-settings:'tnum' 1}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   TRILHO DE NAVEGAÇÃO
+   Uma faixa de 62px com ícones, e um painel que abre ao lado com os itens do
+   grupo. Treze rótulos empilhados o dia inteiro para uma tela que se usa uma
+   por vez era peso morto: o menu tomava 236px de largura permanente e a tabela
+   de custos pagava a conta.
+   O painel é filho do próprio ícone (.rail-item > .fly), então ele nasce na
+   altura certa sem uma linha de cálculo em JS. Abre no hover, no foco de
+   teclado e no clique — o clique é o que faz isso funcionar em tela de toque,
+   onde hover não existe.
+   ════════════════════════════════════════════════════════════════════════════ */
+.rail{width:var(--rail);flex-shrink:0;border-right:1px solid var(--border);
+  background:var(--white);
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:14px 0 12px;position:sticky;top:0;height:100vh;z-index:60}
+.rail-nav{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+  width:100%;overflow:visible}
+.rail-foot{display:flex;flex-direction:column;align-items:center;gap:4px;width:100%}
+/* O separador é o que agrupa: sem ele o trilho vira uma fileira de ícones sem
+   sintaxe. Com dois traços, o olho lê três blocos. */
+.rail-sep{width:26px;height:1px;background:var(--border);margin:7px 0}
+
+.rail-item{position:relative;width:100%;display:flex;justify-content:center}
+.rail-brand{margin-bottom:6px}
+/* A marca é a logo da casa — o M com a silhueta da cidade dentro e a câmera no
+   vão — e não mais o monograma M+Z desenhado à mão. Ela vem em PNG de fundo
+   recortado, então não precisa de ladrilho colorido atrás: o quadrado de
+   violeta que existia aqui era só um lugar para pendurar o desenho antigo. O
+   halo é o mesmo violeta do resto do sistema, para a logo azul não ficar
+   descolada da paleta. */
+/* A marca abre o trilho e ganha um filete embaixo: ela não é um item de menu,
+   é o cabeçalho da coluna. */
+.rail-brand{margin-bottom:9px;padding-bottom:9px;
+  border-bottom:1px solid var(--border)}
+.rail-brand a{display:grid;place-items:center;width:42px;height:42px;
+  border-radius:var(--r-sm);transition:background .15s}
+.rail-brand a:hover{background:var(--blue-50)}
+/* A marca é o único objeto do trilho que não é ícone de traço, então fica um
+   passo maior que os 19px dos ícones — mas só um passo: cheia demais ela vira
+   um borrão azul, e encostada na borda parece cortada. A folga em volta do
+   desenho já vem no próprio PNG. */
+.logo{width:32px;height:32px;display:block;object-fit:contain;
+  filter:drop-shadow(0 0 10px rgba(139,92,246,.40))}
+
+.rail-btn{width:40px;height:40px;display:grid;place-items:center;position:relative;
+  border:1px solid transparent;background:none;border-radius:var(--r-sm);
+  color:var(--muted);cursor:pointer;transition:background .13s,color .13s,border-color .13s}
+.rail-btn svg{width:19px;height:19px;stroke-width:1.9;fill:none}
+.rail-btn:hover{background:var(--blue-50);border-color:var(--border);color:var(--text)}
+.rail-btn:focus-visible{outline:none;box-shadow:var(--ring)}
+/* O item aberto: fundo tinto e um filete de Lapis grudado na borda do trilho.
+   Ele NÃO é preenchido de azul cheio de propósito — o quadrado azul sólido já
+   é o logo, ali em cima, e dois quadrados azuis empilhados fariam o olho
+   perguntar qual dos dois é a marca. O filete na borda é a resposta clássica
+   para "onde eu estou" e não disputa com nada. */
+.rail-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:3px;height:22px;background:var(--accent);border-radius:0 2px 2px 0}
+.rail-item.active > .rail-btn{background:var(--blue-100);border-color:var(--blue-200);
+  color:var(--accent-700)}
+.rail-item.pin > .rail-btn{background:var(--blue-50);border-color:var(--border);color:var(--text)}
+.rail-item.active.pin > .rail-btn{background:var(--blue-100);border-color:var(--blue-200);
+  color:var(--accent-700)}
+/* O avatar do usuário fecha o trilho. Quadrado, como todo o resto — o círculo
+   era o único elemento redondo sobrando na coluna. */
+.rail-btn.av{background:var(--surface-2);border-color:var(--border);
+  color:var(--blue-600);font-weight:700;font-size:12px;letter-spacing:.02em}
+.rail-btn.av:hover{background:var(--blue-100);border-color:var(--blue-200)}
+/* O pontinho: o grupo fechado não some com a informação de que há coisa lá
+   dentro. Número seria mentira (somar leads com propostas não significa nada);
+   ponto só diz "tem". */
+.rail-btn .pt{position:absolute;top:6px;right:6px;width:5px;height:5px;
+  border-radius:50%;background:var(--blue-500);opacity:0;transition:.15s}
+.rail-item.tem .rail-btn .pt{opacity:1}
+.rail-item.active .rail-btn .pt{background:var(--accent)}
+
+/* ── O painel que abre ao lado ── */
+.fly{position:absolute;left:100%;top:-6px;margin-left:9px;min-width:214px;
+  background:var(--white);border:1px solid var(--border);border-radius:var(--r);
+  box-shadow:var(--shadow-lg);padding:6px;z-index:70;
+  opacity:0;visibility:hidden;transform:translateX(-5px);
+  transition:opacity .13s ease,transform .13s ease,visibility .13s}
+/* A ponte invisível sobre o vão de 9px: sem ela o painel fecha no meio do
+   caminho do mouse e o menu fica impossível de usar. */
+.fly::before{content:'';position:absolute;top:0;bottom:0;right:100%;width:11px}
+.rail-item:hover > .fly,
+.rail-item:focus-within > .fly,
+.rail-item.pin > .fly{opacity:1;visibility:visible;transform:none}
+/* Os do rodapé sobem: ancorados pelo topo, encostariam no fim da janela. */
+.fly-up{top:auto;bottom:-6px}
+.fly-h{font-size:10px;font-weight:600;letter-spacing:.12em;color:var(--faint);
+  text-transform:uppercase;padding:8px 10px 7px}
+.fly button{width:100%;display:flex;align-items:center;gap:10px;padding:8px 10px;border:none;
+  background:none;border-radius:var(--r-sm);color:var(--muted);font-weight:500;font-size:13.5px;
+  cursor:pointer;transition:.13s;text-align:left;white-space:nowrap}
+.fly button svg{width:17px;height:17px;flex-shrink:0;stroke-width:1.9;fill:none}
+.fly button:hover{background:var(--blue-50);color:var(--text)}
+.fly button.active{background:var(--blue-100);color:var(--accent-700);font-weight:700;
+  box-shadow:inset 2px 0 0 var(--accent)}
+.fly .badge{margin-left:auto;background:var(--surface-2);color:var(--muted);font-size:11px;
+  font-weight:600;padding:1px 7px;border-radius:3px;min-width:22px;text-align:center;
+  border:1px solid var(--border)}
+.fly button.active .badge{background:var(--accent);color:var(--on-accent);
+  border-color:var(--accent-600);font-weight:700}
+/* Painel de item solto: só o nome. É a legenda que o ícone sozinho não dá. */
+.fly.solo{min-width:0;padding:7px 12px;display:flex;align-items:baseline;gap:7px}
+.fly.solo b{font-size:13px;font-weight:600;white-space:nowrap}
+.fly.solo span{font-size:10px;font-weight:600;letter-spacing:.14em;color:var(--faint);
+  text-transform:uppercase}
+.fly-me{padding:9px 10px 11px;border-bottom:1px solid var(--border);margin-bottom:5px}
+.fly-me b{display:block;font-size:13.5px;font-weight:600}
+.fly-me span{display:block;font-size:11.5px;color:var(--faint);margin-top:2px}
+.fly-me .papel{margin-top:6px;display:inline-block;font-size:10px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--blue-600);
+  background:var(--blue-100);border-radius:3px;padding:2px 6px}
+@media(prefers-reduced-motion:reduce){.fly{transition:none}}
+
+/* MAIN */
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+/* Não existe mais barra do topo (ver o comentário no template). O conteúdo
+   começa no alto da janela; quem diz onde se está é o item aceso no trilho e o
+   "← Voltar" das telas de registro. */
+.page{padding:22px 26px 48px;flex:1}
+
+/* COMPONENTES */
+.btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:var(--r-sm);
+  border:1px solid var(--border-forte);background:var(--white);color:var(--text);font-weight:600;
+  font-size:13.5px;cursor:pointer;transition:.15s;white-space:nowrap;box-shadow:var(--shadow)}
+.btn svg{width:15px;height:15px;stroke-width:2;fill:none}
+.btn:hover{background:var(--blue-50);border-color:var(--blue-200);color:var(--accent-700)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+/* A primária é o Lapis inteiro, com um filete branco no topo (a luz batendo na
+   quina). É o único botão colorido da tela — por isso não precisa de mais nada
+   para ser o botão da vez. */
+.btn-primary{background:var(--accent-grad);border-color:var(--accent-600);color:var(--on-accent);
+  box-shadow:0 1px 0 rgba(255,255,255,.22) inset,0 8px 20px -10px rgba(139,92,246,.9)}
+.btn-primary:hover{background:linear-gradient(180deg,#B18CFF,#9F73FF 58%,#8B5CF6);
+  border-color:var(--accent);color:var(--on-accent)}
+/* Sem vermelho no sistema, a ação destrutiva se separa da primária pelo
+   contorno duplo em tinta: é o único botão da tela com dois filetes, então
+   continua pedindo atenção. No hover ele enche e aí sim domina. */
+.btn-danger{background:var(--white);border-color:var(--text);color:var(--text);
+  box-shadow:inset 0 0 0 1px var(--text)}
+.btn-danger:hover{background:var(--text);border-color:var(--text);color:var(--inv)}
+.btn-sm{height:30px;padding:0 11px;font-size:12.5px}
+/* Fechar o negócio é a única ação da linha que muda o estado do mundo — as
+   outras só abrem ou baixam arquivo. A borda tinta sinaliza isso sem gritar
+   como um botão cheio, que numa tabela de dez linhas viraria uma parede. */
+.btn-ok{border-color:var(--accent-600);color:var(--blue-600);
+  background:rgba(139,92,246,.12)}
+.btn-ok:hover{background:var(--accent-grad);border-color:var(--accent-600);color:var(--on-accent)}
+.btn-icon{width:30px;padding:0;justify-content:center}
+/* Cartão: papel branco sobre a mesa azulada. No claro não precisa de degradê
+   nenhum para se separar do fundo — basta o filete e um fio de sombra. */
+/* overflow-x: a tabela de sete colunas não cabe em janela estreita, e antes ela
+   vazava POR CIMA da borda do cartão. Agora rola dentro dele. Não cria barra
+   vertical: o cartão tem altura automática, então nunca sobra nada no eixo Y. */
+.card{background:var(--white);overflow-x:auto;
+  border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow)}
+.card-h{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.card-h h3{font-size:14.5px;font-weight:600;letter-spacing:-.01em}
+.card-h p{font-size:12.5px;color:var(--muted);margin-top:1px}
+.card-b{padding:18px}
+/* ── Tags de status na família Lapis ───────────────────────────────────────
+   Os nomes das classes (t-green, t-red…) vêm do mapa CORES no JS e por isso
+   ficam como estão. O que separa um estado do outro não é o matiz — é sempre
+   azul — e sim o *tratamento*: cheio pesa, tinto informa, contornado pede,
+   tracejado nega. Os cinco continuam distinguíveis em tons de cinza.
+     t-green  → cheio Lapis          (concluído / positivo)
+     t-blue   → tinto de azul        (em andamento / informativo)
+     t-amber  → contorno azul        (requer ação)
+     t-red    → contorno pontilhado  (negativo / recusado)
+     t-purple → tinto apagado
+     t-gray   → neutro, quase invisível */
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;
+  padding:2px 8px;border-radius:3px;white-space:nowrap;border:1px solid transparent;
+  letter-spacing:.005em}
+.t-green{background:var(--accent);color:var(--on-accent);border-color:var(--accent-600);font-weight:700}
+.t-blue{background:var(--blue-100);color:var(--blue-600);border-color:var(--blue-200)}
+.t-amber{background:var(--white);color:var(--blue);border-color:var(--blue-200)}
+.t-red{background:var(--white);color:var(--muted);border-style:dashed;border-color:var(--border-forte)}
+.t-purple{background:var(--blue-50);color:var(--muted);border-color:var(--border)}
+.t-gray{background:var(--surface-2);color:var(--faint);border-color:var(--border)}
+table{width:100%;border-collapse:collapse}
+/* .09em em 11px maiúsculo: caixa alta pede espaçamento, senão as hastes se
+   encostam. O valor sobe com a caixa e desce com o corpo — é o mesmo número
+   usado em .fly-h, .sublabel e .dl b, para o sistema falar uma língua só. */
+th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--faint);padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap;
+  background:var(--surface-2)}
+td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody tr{transition:.12s}tbody tr:hover{background:var(--blue-50)}
+tbody tr:last-child td{border-bottom:none}
+.cell-main{font-weight:600}.cell-sub{font-size:12px;color:var(--muted)}
+.avatar{width:30px;height:30px;border-radius:var(--r-sm);display:grid;place-items:center;
+  font-weight:700;font-size:11.5px;flex-shrink:0}
+.row-flex{display:flex;align-items:center;gap:10px}
+.empty{padding:52px 20px;text-align:center;color:var(--muted)}
+.empty svg{width:38px;height:38px;stroke:var(--border-forte);fill:none;margin-bottom:12px}
+.empty b{display:block;font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.kpi{background:var(--white);
+  border:1px solid var(--border);border-radius:var(--r);
+  padding:16px 18px;box-shadow:var(--shadow)}
+.kpi-top{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+/* Dois tratamentos e só dois: o KPI principal vem cheio de Lapis, os demais
+   ficam em contorno. */
+.kpi-ic{width:30px;height:30px;border-radius:var(--r-sm);display:grid;place-items:center;
+  border:1px solid var(--border);background:var(--surface-2);flex-shrink:0}
+.kpi-ic svg{width:16px;height:16px;stroke-width:2;stroke:var(--muted);fill:none}
+.kpi-ic.solid{background:var(--accent-grad);border-color:var(--accent-600);
+  box-shadow:0 6px 14px -9px rgba(21,79,196,.85)}
+.kpi-ic.solid svg{stroke:var(--on-accent)}
+.kpi .k{font-size:11px;font-weight:600;color:var(--faint);text-transform:uppercase;letter-spacing:.09em}
+/* O número do KPI é o objeto mais pesado da tela; tudo em volta dele é legenda.
+   -.02em porque em 27px o tracking padrão abre demais entre dígitos. */
+.kpi .v{font-size:27px;font-weight:600;letter-spacing:-.02em;line-height:1.15}
+.kpi .d{font-size:12px;font-weight:500;margin-top:4px;color:var(--muted)}
+.up{color:var(--blue);font-weight:600}.down{color:var(--faint)}
+.toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:14px}
+.toolbar input,.toolbar select{height:36px;border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:0 11px;background:var(--white);color:var(--text)}
+.toolbar input:focus,.toolbar select:focus{outline:none;border-color:var(--blue);box-shadow:var(--ring)}
+.toolbar .grow{flex:1;min-width:180px}
+.kanban{display:grid;grid-template-columns:repeat(auto-fit,minmax(212px,1fr));gap:10px;align-items:start}
+.col{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);
+  padding:9px;min-height:180px}
+.col-h{display:flex;align-items:center;gap:8px;padding:2px 4px 9px}
+.col-h b{font-size:12.5px;font-weight:600}
+.col-h .n{background:var(--white);color:var(--muted);font-size:11px;font-weight:600;
+  padding:1px 6px;border-radius:3px;border:1px solid var(--border)}
+.col-h .sum{margin-left:auto;font-size:11.5px;font-weight:600;color:var(--blue)}
+.kcard{background:var(--white);border:1px solid var(--border);
+  border-radius:var(--r-sm);padding:10px 11px;
+  margin-bottom:8px;cursor:grab;box-shadow:var(--shadow);transition:.15s;
+  border-left:3px solid var(--accent)}
+.kcard:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px);border-color:var(--blue-200);
+  border-left-color:var(--accent)}
+.kcard.dragging{opacity:.4;transform:rotate(2deg)}
+.kcard b{display:block;font-size:13px;font-weight:600;margin-bottom:3px}
+.kcard .co{font-size:12px;color:var(--muted);margin-bottom:8px}
+.kcard .ft{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+/* O valor não quebra: "R$ 320.000" partido em duas linhas é o tipo de coisa
+   que faz o vendedor ler o número errado na frente do cliente. */
+.kcard .val{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap}
+.kcard .av{margin-left:auto;width:22px;height:22px;border-radius:3px;background:var(--accent-grad);
+  color:var(--on-accent);display:grid;place-items:center;font-size:10px;font-weight:700}
+.col.over{background:var(--blue-100);outline:2px dashed var(--blue);outline-offset:-3px}
+/* A coluna de perdas fecha o quadro, e fecha mais baixa de propósito: borda
+   tracejada, fundo rebaixado e o filete do cartão apagado. Ela precisa aceitar
+   o arrasto — é o gesto de quem perdeu o negócio — sem puxar o olho de quem
+   está trabalhando o funil. */
+.col.perda{background:none;border-style:dashed;border-color:var(--border)}
+.col.perda .col-h b,.col.perda .col-h .sum{color:var(--faint)}
+.col.perda .kcard{border-left-color:var(--border-forte);opacity:.82}
+.col.perda .kcard:hover{opacity:1}
+.col-vazia{font-size:11.5px;line-height:1.5;color:var(--faint);padding:10px 4px}
+/* ── GRÁFICOS ────────────────────────────────────────────────────────────────
+   As colunas grossas em degradê, com o valor carimbado em cada uma, saíram.
+   Aquele desenho — bloco saturado, número em toda marca, grade pesada — é o
+   que faz um painel parecer enfeite em vez de informação. Aqui a tinta forte é
+   só do dado: linha de 2px, ponto de 4,5, grade de 1px um passo acima do
+   fundo, e rótulo só onde ele conta uma coisa (o pico, o último ponto, o que
+   tem comentário). O resto se lê no eixo, no hover ou na tabela do <details>.
+   O desenho do SVG mora no graficos.js. */
+.graf svg{display:block;width:100%;height:auto}
+/* Com duas séries a legenda é obrigatória: identidade nunca pode depender só
+   de cor — quem não distingue as duas fica sem saber qual linha é qual. */
+.legenda{display:flex;gap:16px;margin-bottom:6px;font-size:11.5px;color:var(--muted)}
+.legenda span{display:inline-flex;align-items:center;gap:6px}
+.legenda i{width:14px;height:2.5px;border-radius:2px;display:block}
+/* O alvo do hover é a coluna inteira, não o ponto de 9px: ninguém acerta um
+   alvo desse tamanho com o mouse em movimento. */
+.gl-col .gl-tip,.gl-col .gl-cross{opacity:0;transition:opacity .12s}
+.gl-col:hover .gl-tip{opacity:1}
+.gl-col:hover .gl-cross{opacity:.4}
+.gl-tip{pointer-events:none}
+/* A tabela equivalente: quem não distingue cor, quem imprime e quem vai copiar
+   para a planilha leem os mesmos números aqui. */
+.graf-tab{margin-top:12px;border-top:1px solid var(--border);padding-top:9px}
+.graf-tab summary{cursor:pointer;font-size:11.5px;font-weight:600;color:var(--muted);
+  list-style:none}
+.graf-tab summary::-webkit-details-marker{display:none}
+.graf-tab summary::before{content:'▸ ';color:var(--faint)}
+.graf-tab[open] summary::before{content:'▾ '}
+.graf-tab table{margin-top:8px;font-size:12.5px}
+.graf-tab th,.graf-tab td{padding:5px 8px}
+
+/* ── Barra fina ──────────────────────────────────────────────────────────────
+   Rótulo à esquerda, trilho de 6px no meio, número à direita. O valor fora do
+   preenchimento e não dentro: dentro ele sumia na barra curta, e era isso que
+   obrigava aquele "mínimo de 6% de largura" só para o texto caber. */
+.barras{display:flex;flex-direction:column;gap:12px}
+.bfx{display:flex;align-items:center;gap:12px}
+.bfx-l{width:106px;flex-shrink:0;font-size:12.5px;color:var(--muted)}
+.bfx-t{flex:1;height:6px;border-radius:3px;background:var(--surface-2)}
+.bfx-t i{display:block;height:100%;border-radius:3px;background:#8B5CF6;
+  transition:width .4s;min-width:2px}
+.bfx-n{width:112px;flex-shrink:0;text-align:right;font-size:12.5px;font-weight:700;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.bfx-n small{display:block;font-size:11px;font-weight:500;color:var(--faint)}
+/* Duas séries na mesma linha (ganho e em aberto): o vão de 2px em cor de fundo
+   é o que separa os dois trechos — nunca um contorno, que seria tinta a mais
+   sem ser dado. */
+.bfx-t.duo{display:flex;gap:2px;background:none}
+.bfx-t.duo i:first-child{background:#8B5CF6}
+.bfx-t.duo i:last-child{background:#2DA88C}
+.overlay{position:fixed;inset:0;background:rgba(4,3,9,.68);backdrop-filter:blur(5px);
+  display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
+.overlay.show{display:flex}
+.modal{background:var(--white);border:1px solid var(--border);border-radius:var(--r);width:100%;
+  max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:pop .18s ease-out}
+.modal.wide{max-width:760px}
+.modal.xl{max-width:1000px}
+@keyframes pop{from{opacity:0;transform:scale(.98) translateY(6px)}to{opacity:1;transform:none}}
+.modal-h{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;
+  gap:12px;position:sticky;top:0;background:var(--white);border-radius:var(--r) var(--r) 0 0;z-index:2}
+.modal-h h3{font-size:16px;font-weight:600;letter-spacing:-.015em;flex:1}
+.modal-b{padding:20px}
+.modal-f{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:10px;
+  justify-content:flex-end;background:var(--surface-2);border-radius:0 0 var(--r) var(--r);
+  position:sticky;bottom:0}
+.x{width:30px;height:30px;border:none;background:none;border-radius:var(--r-sm);cursor:pointer;
+  color:var(--faint);font-size:20px;line-height:1;display:grid;place-items:center}
+.x:hover{background:var(--blue-100);color:var(--text)}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.f{display:flex;flex-direction:column;gap:5px}
+.f.full{grid-column:1/-1}
+.f label{font-size:12px;font-weight:600;color:var(--muted)}
+.f input,.f select,.f textarea{height:38px;border:1px solid var(--border-forte);border-radius:var(--r-sm);
+  padding:0 11px;background:var(--white);color:var(--text);transition:.15s}
+.f input::placeholder,.f textarea::placeholder,.toolbar input::placeholder{color:var(--faint)}
+.f input:disabled,.f select:disabled,.f textarea:disabled{color:var(--muted);
+  background:var(--surface-2);border-style:dashed;cursor:not-allowed}
+.f select option,.toolbar select option,.eqitem select option{background:var(--white);color:var(--text)}
+.f textarea{height:auto;min-height:80px;padding:9px 11px;resize:vertical}
+.f input:focus,.f select:focus,.f textarea:focus{outline:none;border-color:var(--blue);
+  box-shadow:var(--ring)}
+/* Sem vermelho para o erro, o campo inválido é marcado por borda de tinta
+   cheia mais um filete interno — fica evidente ao lado dos campos de borda
+   azul-clara. */
+.f .err{font-size:11.5px;color:var(--text);font-weight:700;display:none}
+.f .err::before{content:'! ';font-weight:800}
+.f.invalid input,.f.invalid select{border-color:var(--text);box-shadow:inset 0 0 0 1px var(--text)}
+.f.invalid .err{display:block}
+.detail-head{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+.detail-head .avatar{width:48px;height:48px;border-radius:var(--r);font-size:16px}
+.detail-head h2{font-size:20px;font-weight:600;letter-spacing:-.02em}
+.dl{display:grid;grid-template-columns:1fr 1fr;gap:15px 24px}
+.dl .it b{display:block;font-size:11px;font-weight:600;color:var(--faint);
+  text-transform:uppercase;letter-spacing:.09em;margin-bottom:3px}
+.dl .it span{font-size:14px;font-weight:500}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:16px;flex-wrap:wrap}
+.tabs button{border:none;background:none;padding:9px 14px;font-weight:500;font-size:13.5px;
+  color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button:hover{color:var(--text)}
+.tabs button.active{color:var(--accent-700);font-weight:700;border-bottom-color:var(--accent)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.grid3{display:grid;grid-template-columns:2fr 1fr;gap:14px;align-items:start}
+.mt{margin-top:14px}
+.toast{position:fixed;bottom:22px;right:22px;z-index:200;background:#1A1728;
+  color:var(--text);border:1px solid var(--border-forte);
+  padding:11px 16px;border-radius:var(--r-sm);font-size:13.5px;font-weight:600;box-shadow:var(--shadow-lg);
+  display:flex;align-items:center;gap:9px;transform:translateY(80px);opacity:0;transition:.25s}
+.toast.show{transform:none;opacity:1}
+.toast svg{width:16px;height:16px;stroke:var(--blue);fill:none;stroke-width:2.5}
+.check{display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none}
+.check input{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
+.done{text-decoration:line-through;color:var(--faint)}
+
+/* AUTENTICAÇÃO */
+#appRoot{display:none;width:100%}
+#appRoot.show{display:flex}
+/* ══ LOGIN EM DUAS COLUNAS: o azul à esquerda, formulário à direita ══
+   A coluna da esquerda é o único lugar do sistema onde o azul aparece em
+   corpo inteiro — é a assinatura da marca, e é ela que faz a porta de entrada
+   e a casa combinarem mesmo com a casa sendo clara. */
+#authScreen{position:fixed;inset:0;background:var(--white);z-index:500;display:flex;overflow:hidden}
+/* Sem vermelho: o erro se destaca pelo filete aceso à esquerda do texto. */
+#authErr{display:none;color:var(--text);font-size:12.5px;font-weight:600;margin-top:12px;
+  border-left:2px solid var(--accent);padding-left:10px}
+
+/* ── Coluna esquerda: o campo de faíscas ─────────────────────────────────
+   Aqui mora a mesma cena da tela inicial: breu, o arco de violeta cruzando o
+   alto e o nome no meio com o brilho embaixo. A porta de entrada e a casa
+   passaram a ser o mesmo lugar — antes a porta era um bloco de azul chapado e
+   a casa era branca, e o sistema parecia trocar de identidade no login. */
+.auth-art{position:relative;flex:1.15;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  background-color:#08070E;
+  background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.055'/></svg>"),
+    radial-gradient(66% 44% at 50% 46%,rgba(139,92,246,.30),transparent 72%),
+    linear-gradient(180deg,#1A1130 0%,#120E22 32%,#0A0812 68%,#08070E 100%);
+  background-size:120px 120px,auto,auto;
+  background-blend-mode:overlay,screen,normal}
+/* aurora respirando por trás de tudo: 2% de deriva e nada mais. O fundo tem
+   que parecer vivo, não tem que se mexer. */
+.auth-art::before{content:'';position:absolute;inset:-20%;z-index:1;pointer-events:none;
+  background:radial-gradient(42% 30% at 50% 46%,rgba(167,139,250,.22),transparent 70%);
+  animation:silk 22s ease-in-out infinite alternate}
+@keyframes silk{from{transform:translate3d(-1.5%,-2%,0) scale(1)}
+                to{transform:translate3d(1.5%,2%,0) scale(1.06)}}
+/* O arco: o mesmo traço que cruza a tela inicial, com o mesmo caminho e o
+   mesmo par fio + halo. Aqui ele vem escrito no template, porque esta coluna
+   é HTML fixo e não passa por nenhum VIEWS — mas o desenho é o de lá, e as
+   duas telas têm que continuar iguais se um dia a curva mudar. */
+.auth-arco{position:absolute;z-index:1;pointer-events:none;
+  left:-6%;right:-6%;top:6%;height:44%}
+.auth-arco path{fill:none;vector-effect:non-scaling-stroke;stroke-linecap:round}
+.auth-arco .a-fio{stroke:url(#gArcoAuth);stroke-width:1.5}
+.auth-arco .a-halo{stroke:url(#gArcoAuth);stroke-width:11;opacity:.30;filter:blur(8px)}
+/* As faíscas. A máscara radial é o que impede que o campo leia como um
+   retângulo de pontos: elas nascem densas no miolo e se apagam antes de
+   encostar em qualquer borda. */
+#authSparks{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:1;
+  pointer-events:none;
+  -webkit-mask-image:radial-gradient(74% 60% at 50% 50%,#000 34%,transparent 100%);
+  mask-image:radial-gradient(74% 60% at 50% 50%,#000 34%,transparent 100%)}
+/* Emenda com a coluna do formulário: as duas são escuras agora, então a faixa
+   é só um respiro de violeta para o corte não ficar seco. */
+.auth-art::after{content:'';position:absolute;top:0;right:0;bottom:0;width:120px;z-index:2;
+  pointer-events:none;background:linear-gradient(90deg,rgba(139,92,246,0),rgba(8,7,14,.72))}
+.auth-art-in{position:relative;z-index:3;text-align:center;padding:0 32px;
+  user-select:none;width:100%;max-width:520px}
+
+/* O nome é o único objeto da coluna. Entra em 1,5s, quase imediatamente: quem
+   abre a tela de login quer digitar a senha, não assistir a uma animação. */
+.auth-art-in h1{font-size:clamp(56px,10vw,148px);font-weight:600;
+  line-height:.92;letter-spacing:-.04em;color:#FFFFFF;
+  text-shadow:0 0 54px rgba(167,139,250,.50),0 0 14px rgba(139,92,246,.40);
+  animation:name-in 1.5s cubic-bezier(.2,.7,.3,1) .35s backwards}
+@keyframes name-in{from{opacity:0;transform:translateY(14px);filter:blur(9px)}
+  to{opacity:1;transform:none;filter:none}}
+
+/* O feixe: dois pares de linhas em degradê, um largo e desfocado, outro fino
+   e nítido, o de dentro mais claro que o de fora. É o par borrado + nítido que
+   dá a impressão de luz emitida; uma linha só leria como régua. É o mesmo
+   objeto do .brilho da tela inicial, no mesmo tom. */
+/* margin-bottom negativo: o feixe é luz, não conteúdo, e não pode entrar na
+   conta da centralização. */
+.auth-beam{position:relative;height:56px;margin-top:28px;margin-bottom:-46px;
+  animation:beam-in 1.8s ease-out 1.5s backwards}
+.auth-beam i{position:absolute;top:0;display:block}
+.bm-1{left:6%;right:6%;height:3px;filter:blur(3px);
+  background:linear-gradient(90deg,transparent,#8B5CF6,transparent)}
+.bm-2{left:6%;right:6%;height:1px;
+  background:linear-gradient(90deg,transparent,#A78BFA,transparent)}
+.bm-3{left:27%;right:27%;height:6px;filter:blur(4px);
+  background:linear-gradient(90deg,transparent,#D6BCFF,transparent)}
+.bm-4{left:27%;right:27%;height:1px;
+  background:linear-gradient(90deg,transparent,#FFFFFF,transparent)}
+/* O derrame de luz por baixo do feixe. Sem ele as quatro linhas leem como
+   régua desenhada; com ele, como algo que está de fato emitindo. */
+.auth-beam::after{content:'';position:absolute;top:0;left:18%;right:18%;height:56px;
+  pointer-events:none;
+  background:radial-gradient(58% 100% at 50% 0,rgba(139,92,246,.34),transparent 74%)}
+@keyframes beam-in{from{opacity:0;transform:scaleX(.35)}to{opacity:1;transform:none}}
+
+/* Quem pediu menos movimento recebe a cena pronta, sem entrada nenhuma. O
+   campo de faíscas também congela — quem cuida disso é o JS. */
+@media(prefers-reduced-motion:reduce){
+  .auth-art::before,.auth-art-in h1,.auth-beam{animation:none}
+}
+
+/* ── Coluna direita: formulário ── */
+.auth-form{flex:1;display:flex;align-items:center;justify-content:center;
+  padding:40px 28px;overflow-y:auto;
+  background:radial-gradient(120% 80% at 120% 0%,rgba(139,92,246,.14),transparent 60%),var(--bg)}
+.auth-form-in{width:100%;max-width:360px}
+.auth-form-in h3{font-size:23px;font-weight:600;color:var(--text);letter-spacing:-.02em}
+.auth-form-in p{margin-top:8px;font-size:13.5px;color:var(--muted);line-height:1.6}
+.auth-form .fgrid{margin-top:28px;gap:15px}
+.auth-form .f label{color:var(--muted);font-weight:500}
+.auth-form .f input{height:42px;background:var(--surface-2);border-color:var(--border-forte)}
+.auth-form .f input:focus{background:var(--white);border-color:var(--blue);box-shadow:var(--ring)}
+.auth-form .btn{height:42px}
+.auth-form #authToggleBtn{background:var(--surface-2);border-color:var(--border);color:var(--muted);
+  box-shadow:none}
+.auth-form #authToggleBtn:hover{background:var(--blue-50);border-color:var(--blue-200);color:var(--text)}
+
+/* Telas estreitas: a cena vira uma faixa no alto em vez de sumir. Ela é
+   metade da marca — perdê-la no celular seria entregar outro produto. */
+@media(max-width:880px){
+  #authScreen{flex-direction:column}
+  .auth-art{flex:none;height:34vh;min-height:200px}
+  .auth-art::after{top:auto;left:0;right:0;bottom:0;width:auto;height:70px;
+    background:linear-gradient(180deg,rgba(8,7,14,0),rgba(8,7,14,.85))}
+  .auth-art-in h1{font-size:clamp(50px,15vw,84px)}
+  /* O feixe sai: numa faixa de 200px ele empurraria o nome para fora do centro
+     ótico, e o nome é o que tem que sobrar. */
+  .auth-beam{display:none}
+  .auth-form{flex:1;padding:32px 24px}
+}
+
+/* ══ PROPOSTA / COMPOSIÇÃO DE CUSTO ══ */
+.builder{display:grid;grid-template-columns:1fr 340px;gap:14px;align-items:start}
+@media(max-width:1180px){.builder{grid-template-columns:1fr}}
+.line{border:1px solid var(--border);border-radius:var(--r);padding:13px;margin-bottom:11px;
+  background:var(--white);box-shadow:var(--shadow)}
+.line-h{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.line-h .n{width:22px;height:22px;border-radius:3px;background:var(--accent-grad);color:var(--on-accent);
+  display:grid;place-items:center;font-size:11px;font-weight:700;flex-shrink:0}
+.line-h b{flex:1;font-size:14px;font-weight:600}
+.mini{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.mini .f label{font-size:10.5px;letter-spacing:.4px;text-transform:uppercase}
+.mini .f input,.mini .f select{height:34px;font-size:13px}
+@media(max-width:900px){.mini{grid-template-columns:1fr 1fr}}
+.sublabel{font-size:11px;font-weight:600;color:var(--faint);text-transform:uppercase;
+  letter-spacing:.09em;margin:13px 0 5px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center}
+.chipbox{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border-forte);
+  background:var(--white);border-radius:var(--r-sm);padding:5px 10px;font-size:12px;font-weight:600;
+  cursor:pointer;transition:.15s}
+.chipbox:hover{border-color:var(--blue-200);background:var(--blue-50)}
+/* chip ligado: preenchido em Lapis — o estado "marcado" é o único da linha que
+   tem cor, então se lê de longe sem precisar comparar com o vizinho */
+.chipbox.on{background:var(--accent-grad);border-color:var(--accent-600);color:var(--on-accent)}
+.chipbox input{display:none}
+.chipbox .pv{color:var(--faint);font-weight:600}
+.chipbox.on .pv{color:rgba(255,255,255,.72)}
+.pctbox{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--muted)}
+.pctbox input{width:60px;height:28px;border:1px solid var(--border-forte);border-radius:var(--r-sm);
+  padding:0 7px;text-align:center;font-weight:600;background:var(--white);color:var(--text)}
+.linefoot{display:flex;gap:14px;margin-top:11px;padding-top:10px;border-top:1px dashed var(--border);
+  font-size:12px;color:var(--muted);flex-wrap:wrap}
+.linefoot b{color:var(--text)}
+/* O resumo acompanha a rolagem. O max-height é o que faz isso funcionar de
+   verdade: um elemento sticky mais alto que a janela não gruda em lugar nenhum
+   — ele só para quando o FIM dele aparece, e some da vista o tempo todo antes
+   disso. Com altura limitada e rolagem própria, o valor e a margem ficam
+   sempre à vista enquanto se monta o posto lá embaixo. */
+.sum-card{position:sticky;top:18px;max-height:calc(100vh - 36px);overflow-y:auto;
+  scrollbar-width:thin}
+.sum-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  padding:7px 0;font-size:13.5px}
+.sum-row+.sum-row{border-top:1px dashed var(--border)}
+/* O rótulo cede espaço; o valor nunca quebra. "COFINS não cumulativo, líquido
+   de créditos" tem 42 caracteres e numa coluna de 340px empurrava o "R$" para
+   uma linha e os centavos para outra — número partido ao meio não se lê. */
+.sum-row .lb{color:var(--muted);font-weight:500;min-width:0;flex:1;line-height:1.35}
+.sum-row .vl{font-weight:600;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+/* O total fecha a coluna cheio de Lapis — o único bloco de cor sólida da tela
+   de proposta. É o jeito do sistema dizer "este é o número que importa". */
+.sum-total{background:var(--accent-grad);border:1px solid var(--accent-600);border-radius:var(--r-sm);
+  padding:12px 14px;margin-top:12px;color:var(--on-accent);
+  box-shadow:0 1px 0 rgba(255,255,255,.22) inset,0 12px 26px -16px rgba(21,79,196,.9)}
+.sum-total .lb{font-size:11px;font-weight:600;color:rgba(255,255,255,.74);text-transform:uppercase;
+  letter-spacing:.09em}
+.sum-total .vl{font-size:24px;font-weight:600;letter-spacing:-.02em;margin-top:3px;line-height:1.1}
+.sum-total small{font-size:12px;color:rgba(255,255,255,.74);font-weight:500}
+.slider{width:100%;accent-color:var(--accent);height:6px;cursor:pointer}
+/* lista de equipamentos da proposta */
+.addrow{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:13px}
+.addrow .f{flex:1;min-width:150px}
+.eqitem{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:8px 11px;margin-bottom:7px;flex-wrap:wrap;background:var(--white)}
+.eqitem select{height:32px;border:1px solid var(--border-forte);border-radius:var(--r-sm);padding:0 8px;
+  flex:1;min-width:170px;font-size:13px;background:var(--white);color:var(--text)}
+.eqitem input[type=number]{width:64px;height:32px;border:1px solid var(--border-forte);
+  border-radius:var(--r-sm);
+  padding:0 6px;text-align:center;font-size:13px;font-weight:600;background:var(--white);color:var(--text)}
+.eqitem .pr{font-size:13px;font-weight:600;min-width:104px;text-align:right}
+.readbox{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:11px 13px;font-size:13px;line-height:1.7}
+.readbox b{display:block;font-size:11px;font-weight:600;color:var(--faint);
+  text-transform:uppercase;letter-spacing:.09em;margin-bottom:4px}
+
+@media(max-width:1100px){.grid2,.grid3,.fgrid,.dl{grid-template-columns:1fr}}
+@media(max-width:760px){.page{padding:14px}}
+/* Diz ao navegador que a página é clara: scrollbar, autofill e o calendário do
+   input[type=date] passam a vir no tema certo. */
+html{color-scheme:dark}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#312A45;border-radius:3px;
+  border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:#4A3F66;background-clip:content-box}
+::selection{background:var(--blue-100);color:var(--accent-700)}
+/* O autofill do Chrome pinta o campo de amarelo-claro com !important; o único
+   jeito de derrubar é a sombra interna, que cobre o fundo do input. */
+input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus{
+  -webkit-text-fill-color:var(--text);
+  -webkit-box-shadow:0 0 0 40px var(--white) inset;
+  caret-color:var(--text)}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   ADIÇÕES DA v2 — timeline, notas, anexos, paginação, cadeado de congelamento.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Linha do tempo ──────────────────────────────────────────────────────────
+   O fio vertical é o que transforma uma lista de eventos em história. Ele nasce
+   no primeiro ponto e morre no último — daí o ::before no item e não um
+   elemento próprio, que sobraria nas pontas. */
+.tl{position:relative;padding-left:26px}
+.tl::before{content:'';position:absolute;left:6px;top:8px;bottom:8px;width:1px;
+  background:linear-gradient(180deg,transparent,var(--border) 12%,var(--border) 88%,transparent)}
+.tl-it{position:relative;padding:10px 0 13px}
+.tl-it::before{content:'';position:absolute;left:-23px;top:15px;width:9px;height:9px;
+  border-radius:50%;background:var(--white);border:2px solid var(--blue-200)}
+/* O evento que muda dinheiro ou desfecho acende; o resto é fundo de história. */
+.tl-it.forte::before{background:var(--accent);border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(28,97,227,.14)}
+.tl-it .h{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.tl-it b{font-size:13.5px;font-weight:600}
+.tl-it .q{font-size:11.5px;color:var(--faint)}
+.tl-it p{font-size:12.5px;color:var(--muted);margin-top:3px;white-space:pre-wrap}
+.tl-vazio{padding:28px 0;color:var(--muted);font-size:13px}
+
+/* ── Notas ── */
+.nota{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:11px 13px;margin-bottom:9px}
+.nota .h{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.nota .h b{font-size:12px;font-weight:600}
+.nota .h span{font-size:11.5px;color:var(--faint);margin-left:auto}
+.nota p{font-size:13.5px;white-space:pre-wrap}
+.nota-add{display:flex;gap:9px;align-items:flex-start;margin-bottom:13px}
+.nota-add textarea{flex:1;min-height:60px;border:1px solid var(--border-forte);border-radius:var(--r-sm);
+  background:var(--white);color:var(--text);padding:9px 11px;resize:vertical}
+.nota-add textarea:focus{outline:none;border-color:var(--blue);box-shadow:var(--ring)}
+
+/* ── Anexos ── */
+.anexo{display:flex;align-items:center;gap:10px;border:1px solid var(--border);
+  border-radius:var(--r-sm);padding:8px 11px;margin-bottom:7px;font-size:13px;background:var(--white)}
+.anexo svg{width:16px;height:16px;stroke:var(--faint);fill:none;flex-shrink:0}
+.anexo .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.anexo .sz{font-size:11.5px;color:var(--faint)}
+.dropzone{border:1px dashed var(--border-forte);border-radius:var(--r-sm);padding:18px;
+  text-align:center;color:var(--muted);font-size:13px;cursor:pointer;transition:.15s;
+  background:var(--surface-2)}
+.dropzone:hover,.dropzone.over{border-color:var(--blue);background:var(--blue-50);color:var(--text)}
+
+/* ── Paginação (5.2) ── */
+.pager{display:flex;align-items:center;gap:10px;padding:11px 16px;font-size:12.5px;
+  color:var(--muted);border-top:1px solid var(--border)}
+.pager .sp{flex:1}
+.pager button{height:28px;padding:0 10px;border-radius:var(--r-sm);border:1px solid var(--border-forte);
+  background:var(--white);color:var(--text);font-weight:600;font-size:12.5px;cursor:pointer}
+.pager button:hover:not(:disabled){border-color:var(--blue-200);background:var(--blue-50)}
+.pager button:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── Cadeado da proposta congelada (P3) ─────────────────────────────────────
+   Congelada não é um estado decorativo: é a diferença entre um documento e uma
+   consulta. Por isso vira faixa no topo do editor, não um ícone discreto. */
+.faixa{display:flex;align-items:center;gap:11px;padding:10px 14px;border-radius:var(--r-sm);
+  margin-bottom:13px;font-size:13px;border:1px solid var(--border);background:var(--surface-2)}
+.faixa svg{width:17px;height:17px;flex-shrink:0;stroke:var(--blue);fill:none}
+.faixa b{font-weight:700}
+.faixa .sp{flex:1}
+.faixa.aviso{border-color:var(--blue-200);background:var(--blue-50)}
+.faixa.forte{background:var(--accent-grad);border-color:var(--accent-600);color:var(--on-accent)}
+.faixa.forte svg{stroke:var(--on-accent)}
+
+
+/* ── Memória de cálculo do posto ─────────────────────────────────────────────
+   Um posto tem adicional noturno proporcional, insalubridade sobre outra base e
+   fator de cobertura calculado. Sem mostrar a conta, o usuário só vê um número
+   diferente do que esperava e desconfia do sistema. */
+.memoria{margin-top:10px;border-top:1px dashed var(--border);padding-top:10px}
+.memoria summary{cursor:pointer;font-size:11.5px;font-weight:600;color:var(--muted);
+  list-style:none}
+.memoria summary::-webkit-details-marker{display:none}
+.memoria summary::before{content:'▸ ';color:var(--faint)}
+.memoria[open] summary::before{content:'▾ '}
+.memoria table{margin-top:9px;font-size:12px}
+.memoria td{padding:5px 8px;border-bottom:1px solid var(--border)}
+.memoria td:last-child{text-align:right;font-weight:600}
+.memoria .obs{font-size:11.5px;color:var(--faint);padding-top:8px}
+
+/* ── Barra de metas ── */
+/* A trilha é um passo mais claro da própria escala do preenchimento — assim o
+   estado se lê ao longo da barra inteira, e não só onde há cor. */
+.meta-bar{height:6px;border-radius:3px;background:var(--surface-2)}
+.meta-bar i{display:block;height:100%;border-radius:3px;background:#8B5CF6}
+
+/* ── Trabalhos em andamento (fila de documentos) ── */
+.jobs{position:fixed;right:22px;bottom:22px;z-index:150;display:flex;flex-direction:column;
+  gap:8px;align-items:flex-end}
+.job{background:var(--white);border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:9px 13px;font-size:12.5px;box-shadow:var(--shadow-lg);display:flex;
+  align-items:center;gap:10px;min-width:250px}
+.job .sp{flex:1}
+.job .dot{width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0;
+  animation:pulsa 1.1s ease-in-out infinite}
+@keyframes pulsa{0%,100%{opacity:.35}50%{opacity:1}}
+.job.pronto .dot{background:var(--accent);animation:none}
+.job.falhou .dot{background:var(--faint);animation:none}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   TELA INICIAL — a marca e o carrossel de módulos
+   ════════════════════════════════════════════════════════════════════════════
+   A grade de quatorze cartões com legenda em cada um saiu. Ela tentava
+   explicar o sistema inteiro de uma vez e por isso não dizia nada: quatorze
+   parágrafos empilhados numa tela que existe para durar três segundos.
+
+   O que ficou é o que a referência tem: o nome no meio da tela, um traço de
+   luz por baixo dele, e os destinos numa fileira de quatro — o resto entra
+   pela seta. Quem abre o CRM já sabe para onde vai; a tela inicial só precisa
+   ser a porta, não o manual.
+
+   O traço que cruza o alto da página (.arco) é a mesma luz do brilho sob o
+   nome, e é dela que sai o violeta de todo o sistema.
+   ════════════════════════════════════════════════════════════════════════════ */
+.inicio{position:relative;display:flex;flex-direction:column;
+  min-height:calc(100vh - 8px)}
+/* A tela inicial começa colada no topo: o nome de 116px é a abertura. */
+body.na-inicio .page{padding-top:0}
+
+/* ── O arco de luz ───────────────────────────────────────────────────────────
+   Duas vezes o mesmo caminho: o fio nítido e, por baixo, o mesmo traço grosso
+   e desfocado. É o par que faz o olho ler "luz" em vez de "linha desenhada".
+   vector-effect mantém a espessura constante quando o SVG é esticado — sem
+   ele, o preserveAspectRatio="none" achataria o traço junto com a curva. */
+.arco{position:absolute;top:-30px;left:-26px;right:-26px;height:min(40vh,320px);
+  z-index:0;pointer-events:none;overflow:visible}
+.arco path{fill:none;vector-effect:non-scaling-stroke;stroke-linecap:round}
+.arco .a-fio{stroke:url(#gArco);stroke-width:1.5}
+.arco .a-halo{stroke:url(#gArco);stroke-width:11;opacity:.30;filter:blur(8px)}
+
+/* ── A marca ─────────────────────────────────────────────────────────────────
+   Ela ocupa o primeiro terço da tela e é o único objeto ali. Os cartões
+   começam mais abaixo de propósito: a primeira coisa que a tela mostra é de
+   quem ela é. */
+.hero{position:relative;z-index:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;
+  /* A capa respira mais do que precisaria: o nome nasce a 15vh do topo e os
+     módulos vêm depois dele, não junto. Numa tela que dura três segundos, o
+     vazio em volta do nome é o que faz ele ser a primeira coisa lida. */
+  padding:clamp(56px,15vh,150px) 16px clamp(40px,8vh,78px);user-select:none}
+.hero h1{font-size:clamp(52px,8.5vw,116px);font-weight:600;line-height:.94;
+  letter-spacing:-.045em;color:#FFFFFF;
+  /* O nome não é branco chapado: ele tem o mesmo violeta espalhado atrás,
+     como se a luz do arco batesse nele. */
+  text-shadow:0 0 52px rgba(167,139,250,.45),0 0 14px rgba(139,92,246,.35);
+  animation:marca-in 1.1s cubic-bezier(.2,.7,.3,1) backwards}
+@keyframes marca-in{from{opacity:0;transform:translateY(12px);filter:blur(8px)}
+  to{opacity:1;transform:none;filter:none}}
+
+/* O brilho sob o nome. Quatro linhas em degradê — um par largo e desfocado,
+   um par fino e nítido, o de dentro mais claro que o de fora — mais o derrame
+   radial embaixo. É o mesmo tom do arco lá em cima, e é essa repetição que
+   amarra a tela: a luz que cruza o alto é a mesma que apoia o nome. */
+.brilho{position:relative;height:44px;width:min(560px,86vw);margin-top:20px;
+  margin-bottom:-30px;animation:brilho-in 1.4s ease-out .5s backwards}
+.brilho i{position:absolute;top:0;display:block}
+.brilho .b1{left:2%;right:2%;height:3px;filter:blur(3px);
+  background:linear-gradient(90deg,transparent,#8B5CF6,transparent)}
+.brilho .b2{left:2%;right:2%;height:1px;
+  background:linear-gradient(90deg,transparent,#A78BFA,transparent)}
+.brilho .b3{left:26%;right:26%;height:6px;filter:blur(4px);
+  background:linear-gradient(90deg,transparent,#D6BCFF,transparent)}
+.brilho .b4{left:26%;right:26%;height:1px;
+  background:linear-gradient(90deg,transparent,#FFFFFF,transparent)}
+.brilho::after{content:"";position:absolute;top:0;left:14%;right:14%;height:60px;
+  pointer-events:none;
+  background:radial-gradient(58% 100% at 50% 0,rgba(139,92,246,.34),transparent 74%)}
+@keyframes brilho-in{from{opacity:0;transform:scaleX(.3)}to{opacity:1;transform:none}}
+.hero .ola{margin-top:38px;font-size:14px;color:var(--muted);letter-spacing:.01em}
+.hero .ola b{color:var(--text);font-weight:600}
+/* ── O carrossel ─────────────────────────────────────────────────────────────
+   Quatro cartões por vez e a seta para o resto. A conta de rolagem é o próprio
+   clientWidth da trilha: quatro colunas mais três vãos SÃO a largura visível,
+   então "avançar uma página" é rolar exatamente isso — sem número mágico em
+   JS e sem quebrar quando a media query passa para três ou dois cartões. */
+.modulos{position:relative;z-index:1;padding-bottom:8px}
+.mod-h{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.mod-h .lb{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--faint)}
+.mod-h .sp{flex:1}
+.mod-nav{display:flex;gap:8px}
+.mod-nav button{width:36px;height:36px;display:grid;place-items:center;cursor:pointer;
+  border:1px solid var(--border-forte);border-radius:50%;background:var(--surface-2);
+  color:var(--text);transition:.16s}
+.mod-nav button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2;
+  stroke-linecap:round;stroke-linejoin:round}
+.mod-nav button:hover:not(:disabled){border-color:var(--accent);color:#FFF;
+  background:rgba(139,92,246,.16);box-shadow:var(--glow)}
+.mod-nav button:disabled{opacity:.32;cursor:not-allowed}
+.mod-nav button:focus-visible{outline:none;box-shadow:var(--ring)}
+
+/* A barra de rolagem some, mas a rolagem continua: dedo e trackpad arrastam a
+   fileira, e a seta é para quem está no mouse. */
+.trilha{display:grid;grid-auto-flow:column;grid-auto-columns:calc((100% - 42px)/4);
+  gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;
+  scrollbar-width:none;-ms-overflow-style:none;padding:2px 2px 6px}
+.trilha::-webkit-scrollbar{display:none}
+
+/* ── O cartão ── */
+.mod{position:relative;overflow:hidden;scroll-snap-align:start;
+  display:flex;flex-direction:column;align-items:stretch;text-align:left;
+  min-height:250px;padding:22px 20px 20px;cursor:pointer;
+  border:1px solid var(--border);border-radius:14px;
+  background:linear-gradient(158deg,rgba(139,92,246,.13),rgba(139,92,246,0) 52%),var(--white);
+  transition:transform .18s,border-color .18s,box-shadow .18s}
+.mod:hover{transform:translateY(-3px);border-color:rgba(139,92,246,.46);
+  box-shadow:0 24px 46px -28px #000,var(--glow)}
+.mod:focus-visible{outline:none;border-color:var(--accent);box-shadow:var(--ring)}
+.mod:active{transform:translateY(-1px)}
+
+/* A curva no pé do cartão: um círculo enorme do qual só se vê a beirada de
+   cima, cortada pelo overflow. Mesmo desenho do arco da capa, em miniatura —
+   por isso a tela inteira parece ter sido feita com um traço só. */
+.mod .curva{position:absolute;left:12%;top:56%;width:150%;aspect-ratio:1;
+  border-radius:50%;border:1px solid transparent;
+  border-top-color:rgba(139,92,246,.30);pointer-events:none;transition:.25s}
+.mod .curva::before{content:"";position:absolute;inset:-4px;border-radius:50%;
+  border:4px solid transparent;border-top-color:rgba(139,92,246,.22);filter:blur(7px)}
+.mod:hover .curva{border-top-color:rgba(179,136,255,.62)}
+.mod > :not(.curva){position:relative;z-index:1}
+
+/* O ícone é traço solto, sem ladrilho de fundo: o quadrado colorido atrás de
+   cada ícone é o que fazia a grade antiga parecer um menu de aplicativo. */
+.mod .mic{color:var(--blue);margin-bottom:20px}
+.mod .mic svg{width:27px;height:27px;fill:none;stroke:currentColor;stroke-width:1.6;
+  stroke-linecap:round;stroke-linejoin:round;display:block}
+.mod:hover .mic{color:#D6BCFF}
+.mod .mt{font-size:17px;font-weight:700;letter-spacing:-.015em;margin-bottom:7px}
+.mod .md{font-size:12.5px;color:var(--muted);line-height:1.55;flex:1;margin-bottom:18px}
+
+/* O pé: a seta redonda à esquerda, a contagem à direita. A contagem só aparece
+   quando há o que contar — "0 leads" numa base nova faz o sistema parecer
+   quebrado logo no primeiro minuto. */
+.mod .mpe{display:flex;align-items:center;gap:10px}
+.mod .seta{width:34px;height:34px;flex-shrink:0;display:grid;place-items:center;
+  border:1px solid rgba(139,92,246,.45);border-radius:50%;color:var(--blue);
+  transition:.18s}
+.mod .seta svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.2;
+  stroke-linecap:round;stroke-linejoin:round}
+.mod:hover .seta{background:var(--accent-grad);border-color:var(--accent-600);
+  color:#FFF;box-shadow:var(--glow)}
+.mod .mn{margin-left:auto;text-align:right;font-size:11.5px;color:var(--faint);
+  line-height:1.25}
+.mod .mn b{display:block;font-size:15px;font-weight:700;color:var(--blue);
+  font-variant-numeric:tabular-nums}
+
+/* Os pontos: quantas fileiras existem e em qual você está. Clicáveis, porque
+   quem viu quatro páginas quer voltar direto para a segunda. */
+.pontos{display:flex;justify-content:center;gap:7px;margin-top:20px}
+.pontos button{width:22px;height:4px;border:none;border-radius:2px;padding:0;cursor:pointer;
+  background:var(--border-forte);transition:.2s}
+.pontos button:hover{background:var(--blue-200)}
+.pontos button.on{width:34px;background:var(--accent);box-shadow:var(--glow)}
+.pontos button:focus-visible{outline:none;box-shadow:var(--ring)}
+
+@media(max-width:1180px){.trilha{grid-auto-columns:calc((100% - 28px)/3)}}
+@media(max-width:900px){.trilha{grid-auto-columns:calc((100% - 14px)/2)}}
+@media(max-width:620px){
+  .trilha{grid-auto-columns:86%}
+  .hero{padding:36px 8px 30px}
+  .mod{min-height:214px}
+}
+
+/* ── A lista de escolha (botão Gerenciar) ────────────────────────────────────
+   Quais destinos entram no carrossel. Lista com caixa de seleção, agrupada
+   pela área do sistema — escolher item de menu é trabalho de lista, não de
+   mais uma grade de cartõezinhos com prévia. */
+.escolha{border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden}
+.escolha-g{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--faint);background:var(--surface-2);padding:7px 12px;
+  border-bottom:1px solid var(--border)}
+.escolha-g:not(:first-child){border-top:1px solid var(--border)}
+.escolha-it{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;
+  font-size:13.5px;border-bottom:1px solid var(--border);transition:background .12s}
+.escolha-it:last-child{border-bottom:none}
+.escolha-it:hover{background:var(--blue-50)}
+.escolha-it input{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;
+  flex-shrink:0}
+.escolha-it .dd{margin-left:auto;font-size:11.5px;color:var(--faint);text-align:right}
+.escolha-conta{display:flex;align-items:baseline;gap:6px;margin-bottom:12px;
+  font-size:12.5px;color:var(--muted)}
+.escolha-conta b{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
+
+/* Quem pediu menos movimento no sistema recebe a mesma tela, parada. */
+@media(prefers-reduced-motion:reduce){
+  .hero h1,.brilho{animation:none}
+  .trilha{scroll-behavior:auto}
+  .mod{transition:none}
+  .mod:hover{transform:none}
+}
+
+/* Impressão: a tela de proposta às vezes é impressa direto do navegador. O
+   sistema é escuro na tela e branco no papel — imprimir o breu gastaria meio
+   cartucho por página e sairia ilegível. */
+@media print{
+  .rail,.toolbar,.btn,.jobs,.toast,.arco,.hero,.modulos{display:none!important}
+  html{color-scheme:light}
+  body{background:#fff;color:#000}
+  .card,.kpi,.line,.modal{border-color:#ccc;background:#fff;box-shadow:none;color:#000}
+  th,td{border-color:#ddd;color:#000}
+  th{background:#f4f4f4}
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   EDITOR DE PROPOSTA — uma tela, três blocos
+   ════════════════════════════════════════════════════════════════════════════
+   O que existia aqui eram cinco abas. A conta de por que elas saíram está no
+   comentário do VIEWS.propostaEditor; o que interessa ao CSS é a consequência:
+   a página ficou longa, e coisa longa precisa de âncoras. Elas são três — o
+   número do bloco, o resumo grudado no topo e a gaveta fechada.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.ed-topo{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.ed-topo b{font-size:14px;font-weight:700}
+
+/* Identificação: quatro campos numa faixa que quebra sozinha. Não é .fgrid
+   porque as larguras aqui não são iguais — o título merece o dobro do que a
+   situação, e uma grade de quatro colunas iguais dava um campo de título com
+   espaço para dezoito caracteres. */
+.ident{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.ident .f{min-width:0}
+
+/* O número do bloco. Mesma pastilha do .line-h .n, um ponto maior: ele é a
+   âncora de quem rola a página e precisa saber onde está sem ler o título. */
+.bloco-n{width:24px;height:24px;border-radius:5px;background:var(--accent-grad);
+  color:var(--on-accent);display:grid;place-items:center;
+  font-size:12px;font-weight:800;flex-shrink:0}
+
+/* ── gavetas ─────────────────────────────────────────────────────────────── */
+.gaveta{margin-top:10px;border:1px solid var(--border);border-radius:var(--r);
+  background:var(--white);overflow:hidden}
+.gaveta.aberta{box-shadow:var(--shadow)}
+.gaveta-h{width:100%;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:12px 16px;background:none;border:none;cursor:pointer;text-align:left;
+  font-family:inherit;color:var(--text)}
+.gaveta-h:hover{background:var(--surface-2)}
+.gaveta-t{font-size:13.5px;font-weight:600}
+.gaveta-s{font-size:12.5px;color:var(--muted);flex:1;min-width:140px}
+/* A seta é desenhada, não é caractere: "+"/"−" em fonte de sistema saem de
+   tamanhos diferentes e a linha inteira pula ao abrir. */
+.gaveta-i{width:9px;height:9px;flex-shrink:0;border-right:2px solid var(--faint);
+  border-bottom:2px solid var(--faint);transform:rotate(-45deg);
+  transition:transform .16s ease;margin-left:2px}
+.gaveta.aberta .gaveta-i{transform:rotate(45deg)}
+.gaveta-b{padding:4px 16px 16px}
+
+/* ── margem alvo ──────────────────────────────────────────────────────────
+   O campo mais importante da tela, e por isso o único que ganha caixa própria.
+   Enquanto ele era só mais um número numa grade de seis, a pessoa preenchia
+   "18" achando que era margem — e era markup. O tamanho aqui é argumento. */
+.alvo{display:flex;gap:18px;align-items:center;flex-wrap:wrap;
+  border:1px solid var(--border-forte);border-radius:var(--r);
+  padding:14px 16px;background:var(--surface-2)}
+.alvo.ligado{border-color:var(--accent);background:var(--white)}
+.alvo-c{flex:0 0 auto}
+.alvo-c label{display:block;font-size:11px;font-weight:600;color:var(--faint);
+  text-transform:uppercase;letter-spacing:.09em;margin-bottom:5px}
+.alvo-in{display:flex;align-items:baseline;gap:5px}
+.alvo-in input{width:96px;height:44px;font-size:24px;font-weight:700;text-align:right;
+  border:1px solid var(--border-forte);border-radius:var(--r-sm);padding:0 10px;
+  background:var(--white);color:var(--text)}
+.alvo-in input:focus{outline:none;border-color:var(--blue);box-shadow:var(--ring)}
+.alvo-in span{font-size:17px;font-weight:700;color:var(--muted)}
+/* O mínimo da empresa fica embaixo do campo, miúdo. É informação, não
+   sugestão: o campo continua vazio até alguém decidir a margem deste
+   contrato. */
+.alvo-min{font-size:11px;color:var(--faint);margin-top:6px;font-weight:600}
+.alvo-r{flex:1;min-width:190px;display:flex;flex-direction:column;gap:2px}
+.alvo-r b{font-size:22px;font-weight:700;line-height:1.1}
+.alvo-r span{font-size:12.5px;color:var(--muted);line-height:1.55}
+
+/* Condições: cinco campos curtos, tamanho de campo curto. A .fgrid dava
+   largura de coluna inteira para "Validade (dias)". */
+.cond{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;
+  margin-top:14px}
+.cond .cell-sub{margin-top:4px}
+
+/* A segunda linha de uma linha de material: a conta do multiplicador. Ocupa a
+   largura toda porque nasce depois da quebra do flex. */
+.eqitem .sub{flex-basis:100%;font-size:11.5px;color:var(--muted);line-height:1.5;
+  padding-top:2px;border-top:1px dashed var(--border)}
+.eqitem .sub b{color:var(--text);font-weight:600}
+
+/* ── a grade não pode ceder ao texto mais longo ──────────────────────────────
+   Coluna `1fr` de grid tem mínimo `auto`, ou seja, o tamanho do conteúdo. Um
+   <select> sem largura declarada mede a OPÇÃO MAIS LONGA — e "Conjunto de
+   uniforme · R$ 190,00 a cada 6 meses · por funcionário" alargava a coluna da
+   esquerda o bastante para empurrar o resumo para fora da tela.
+
+   Duas linhas resolvem: a coluna pode encolher abaixo do conteúdo, e o select
+   se ajusta ao pai em vez de o pai se ajustar a ele. */
+.builder > *{min-width:0}
+.f select{width:100%}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   TELA DE CONFERÊNCIA DA PROPOSTA
+   ════════════════════════════════════════════════════════════════════════════
+   Regra única desta tela: dinheiro alinha à direita, texto à esquerda. Coluna
+   de valor centralizada ou à esquerda obriga a ler dígito a dígito para
+   comparar duas linhas — e o motivo desta tela existir é justamente conferir
+   uma linha contra a outra. */
+th.num,td.num{text-align:right;white-space:nowrap;
+  font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1}
+td.num .cell-sub{text-align:right}
+
+/* Rodapé de tabela: é total, então pesa e não pisca no hover. */
+tfoot td{padding:11px 14px;border-top:2px solid var(--border-forte);
+  background:var(--surface-2);font-weight:700}
+tbody tr.forte{background:var(--surface-2)}
+tbody tr.forte:hover{background:var(--surface-2)}
+tbody tr.forte td{border-bottom-color:var(--border-forte)}
+
+/* A conta que fecha: duas colunas, sem cabeçalho, para a pessoa poder somar a
+   coluna da direita na calculadora e bater com a última linha. */
+.conf-conta td:first-child{width:100%}
+.conf-conta tr:last-child td{border-bottom:none;border-top:2px solid var(--border-forte);
+  background:var(--accent-grad);color:var(--on-accent);font-size:15px}
+.conf-conta tr:last-child:hover td{background:var(--accent-grad)}
+.conf-conta tr:last-child .cell-sub{color:rgba(255,255,255,.8)}
+
+/* ── o cartão de um posto na tela de conferência ─────────────────────────────
+   A folha aberta é uma lista de duas colunas, não uma <table>: cada linha tem
+   uma explicação embaixo do rótulo (de onde vem a base do adicional, quantas
+   horas ganham noturno e quantas não), e isso numa célula de tabela empurra a
+   coluna de valor para longe. Aqui o valor fica ancorado à direita e o texto
+   corre livre embaixo do nome. */
+.posto-c{border:1px solid var(--border);border-radius:var(--r);padding:14px;
+  margin-bottom:12px;background:var(--white)}
+.posto-c:last-of-type{margin-bottom:0}
+.posto-h{display:flex;align-items:flex-start;gap:11px;flex-wrap:wrap;margin-bottom:4px}
+.posto-h .n{width:22px;height:22px;border-radius:3px;background:var(--accent-grad);
+  color:var(--on-accent);display:grid;place-items:center;font-size:11px;
+  font-weight:700;flex-shrink:0;margin-top:2px}
+.posto-h b{font-size:14px;font-weight:600}
+.posto-q{font-size:12px;color:var(--muted);text-align:right;line-height:1.6;white-space:nowrap}
+.posto-q b{color:var(--text)}
+
+.folha{border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden}
+.folha-l{display:flex;align-items:baseline;gap:14px;padding:9px 12px;font-size:13.5px}
+.folha-l+.folha-l{border-top:1px solid var(--border)}
+.folha-l .r{flex:1;min-width:0}
+.folha-l .o{font-size:11.5px;color:var(--muted);line-height:1.55;margin-top:3px}
+.folha-l .o b{color:var(--text);font-weight:600}
+.folha-l .v{font-weight:600;white-space:nowrap;text-align:right;
+  font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1}
+.folha-l.forte{background:var(--surface-2);border-top:1px solid var(--border-forte)}
+/* A alíquota anda colada no nome do adicional, miúda: quem lê "Periculosidade
+   30%" entende de imediato; "Periculosidade" e um 30% na outra ponta da linha
+   viram duas informações que a pessoa tem que juntar sozinha. */
+.folha-l .pv{font-size:11px;font-weight:700;color:var(--faint);
+  background:var(--surface-2);border-radius:3px;padding:1px 5px;margin-left:2px}
+
+.posto-f{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;padding-top:11px;
+  border-top:1px dashed var(--border);font-size:12px;color:var(--muted)}
+.posto-f b{color:var(--text);font-weight:700}
+.posto-f .tot{margin-left:auto}
+.posto-f .tot b{color:var(--blue)}
+
+/* Campo com botão colado: "+ Novo" ao lado do seletor de cliente e de contato.
+   O botão não pode encolher — num nome de empresa longo o select toma tudo e o
+   "+ Novo" viraria uma coluna de duas letras. */
+.com-botao{display:flex;gap:6px;align-items:stretch}
+.com-botao select{flex:1;min-width:0}
+.com-botao .btn{flex:0 0 auto;height:38px}

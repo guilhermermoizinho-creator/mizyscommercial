@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mizys CRM</title>
+<!-- Ícone da aba: a própria logo, em 64px. Era um monograma M+Z desenhado em
+     SVG aqui dentro; agora que a marca existe como arquivo, manter dois
+     desenhos diferentes da mesma coisa só criava a chance de um envelhecer. -->
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+<!-- IBM Plex Sans. Saiu a Inter: ela é a fonte padrão de todo template gerado
+     nos últimos anos e por isso a interface inteira lia como "tela de demo".
+     A Plex tem desenho de gente — o 'a' de dois andares com a barriga alta, o
+     'g' de uma perna, o 'l' com cauda — e figuras tabulares de verdade, que é
+     o que uma tabela financeira precisa. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v={{ versao_estatica() }}">
+</head>
+<body>
+
+<div id="authScreen">
+  <!-- Coluna esquerda: faíscas e o nome. Uma tela de entrada com vários objetos
+       manda o olho escolher onde pousar; com um, não há escolha. -->
+  <div class="auth-art">
+    <!-- O arco: o mesmo traço de luz que cruza o alto da tela inicial. Ele é
+         desenho, não conteúdo — daí o aria-hidden. -->
+    <svg class="auth-arco" viewBox="0 0 1200 420" preserveAspectRatio="none" aria-hidden="true">
+      <defs><linearGradient id="gArcoAuth" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#8B5CF6" stop-opacity="0"/>
+        <stop offset=".34" stop-color="#8B5CF6" stop-opacity=".50"/>
+        <stop offset=".70" stop-color="#C9A6FF" stop-opacity=".95"/>
+        <stop offset="1" stop-color="#EFE4FF" stop-opacity="1"/>
+      </linearGradient></defs>
+      <path class="a-halo" d="M-40 400 C 300 235 700 75 1240 30"/>
+      <path class="a-fio"  d="M-40 400 C 300 235 700 75 1240 30"/>
+    </svg>
+    <canvas id="authSparks"></canvas>
+    <div class="auth-art-in">
+      <h1>Mizys</h1>
+      <div class="auth-beam" aria-hidden="true">
+        <i class="bm-1"></i><i class="bm-2"></i><i class="bm-3"></i><i class="bm-4"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="auth-form">
+    <div class="auth-form-in">
+      <h3 id="authTitle">Entrar no Mizys CRM</h3>
+      <p id="authSub">Acesso restrito aos usuários cadastrados</p>
+      <div class="fgrid">
+        <div class="f full"><label for="authEmail">E-mail</label>
+         <input id="authEmail" type="email" placeholder="voce@empresa.com" autocomplete="username"></div>
+        <div class="f full"><label for="authPass">Senha</label>
+         <input id="authPass" type="password" placeholder="••••••••" autocomplete="current-password"></div>
+        <div class="f full" id="authConfirmWrap" style="display:none"><label for="authPassConfirm">Confirmar senha</label>
+         <input id="authPassConfirm" type="password" placeholder="••••••••" autocomplete="new-password"></div>
+      </div>
+      <div id="authErr"></div>
+      <button class="btn btn-primary" id="authBtn" style="width:100%;margin-top:18px;justify-content:center">Entrar</button>
+      <button class="btn" id="authToggleBtn" type="button" style="width:100%;margin-top:9px;justify-content:center">Primeiro acesso? Criar conta</button>
+    </div>
+  </div>
+</div>
+
+<div id="appRoot">
+<!-- ══ TRILHO DE NAVEGAÇÃO ══════════════════════════════════════════════════
+     A barra virou um trilho de ícones de 62px. O que sumiu não foi informação:
+     eram treze rótulos sempre visíveis para uma tela que usa um por vez. Agora
+     o menu ocupa o mínimo permanente e abre a extensão do grupo ao lado quando
+     o mouse encosta (ou quando se clica, em tela de toque).
+     Cada .rail-item é o gancho de posicionamento do seu .fly — por isso o
+     painel nasce colado no ícone certo sem uma linha de cálculo em JS. -->
+<aside class="rail" id="rail">
+  <!-- A logo da casa. É o mesmo arquivo do ícone da aba e o mesmo da tela de
+       login: um desenho só, em três tamanhos. -->
+  <div class="rail-item rail-brand" data-g="marca">
+    <a href="#inicio" aria-label="Mizys CRM">
+      <img class="logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Mizys">
+    </a>
+    <div class="fly solo" role="tooltip"><b>Início</b><span id="brandSeg">CRM</span></div>
+  </div>
+
+  <nav class="rail-nav" id="nav">
+    <!-- A ordem do trilho é a ordem em que o trabalho acontece: prospecta,
+         propõe, assina. Depois da linha vem o que não é o dia a dia da venda —
+         as tabelas que alimentam o cálculo, os números e o sistema.
+
+         Não há item "Início" nem botão "+" aqui: o atalho para a tela inicial
+         é a própria logo, ali em cima — que é o que se clica num site — e
+         criar coisa é sempre o botão da tela que já está aberta, ao lado do
+         que se está olhando. Um ícone de casa embaixo da marca seria a mesma
+         porta desenhada duas vezes. -->
+    <div class="rail-sep"></div>
+
+    <!-- Comercial: o caminho da venda até o negócio, na ordem em que ele
+         acontece. Atividades entrou aqui: ligação, reunião e visita são o
+         trabalho de mover um lead adiante, não a operação depois do contrato —
+         é o vendedor quem abre esta tela, e ele já está neste grupo. -->
+    <div class="rail-item has-menu" data-g="comercial">
+      <button class="rail-btn" aria-haspopup="true" aria-expanded="false" aria-label="Comercial">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 4h18l-7 8.2V21l-4-2.4v-6.4z"/></svg>
+        <i class="pt" aria-hidden="true"></i>
+      </button>
+      <div class="fly">
+        <div class="fly-h">Comercial</div>
+        <button data-v="pipeline">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M7 12h10M10 18h4"/></svg>
+          Pipeline</button>
+        <button data-v="leads">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11h-6"/></svg>
+          Leads <span class="badge" id="nLeads">0</span></button>
+        <button data-v="contatos">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+          Contatos <span class="badge" id="nContatos">0</span></button>
+        <button data-v="oportunidades">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Oportunidades <span class="badge" id="nOps">0</span></button>
+        <button data-v="atividades">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/></svg>
+          Atividades <span class="badge" id="nAtiv">0</span></button>
+      </div>
+    </div>
+
+    <!-- Propostas: pilar próprio, e não um item no fim do Comercial. Montar
+         proposta é outro trabalho — postos, adicionais, congelamento, PDF,
+         envio — e não a continuação de arrastar cartão no funil. -->
+    <div class="rail-item has-menu" data-g="propostas">
+      <button class="rail-btn" aria-haspopup="true" aria-expanded="false" aria-label="Propostas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15h6M9 11h3"/></svg>
+        <i class="pt" aria-hidden="true"></i>
+      </button>
+      <div class="fly">
+        <div class="fly-h">Propostas</div>
+        <button data-v="propostas">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15h6M9 11h3"/></svg>
+          Propostas comerciais <span class="badge" id="nProp">0</span></button>
+        <button data-acao="novaProposta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
+          Nova proposta</button>
+      </div>
+    </div>
+
+    <!-- Contratos: o que existe depois da assinatura. É um item só, então vai
+         direto ao clique em vez de abrir um menu de uma linha; a contagem
+         aparece no painel do nome. -->
+    <div class="rail-item" data-g="contratos">
+      <button class="rail-btn" data-v="contratos" aria-label="Contratos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m9 15 2 2 4-4"/></svg>
+      </button>
+      <div class="fly solo" role="tooltip"><b>Contratos</b><span id="nContratos">0</span></div>
+    </div>
+
+    <div class="rail-sep"></div>
+
+    <!-- Bases de cálculo: as três tabelas que decidem quanto custa um posto.
+         O nome deixou de ser "Cadastros" porque cadastro é qualquer coisa que
+         se digita uma vez; estas aqui entram na conta. Convenção dá salário e
+         benefício, escala dá o fator de cobertura, equipamento entra como
+         custo mensal ou de implantação. -->
+    <div class="rail-item has-menu" data-g="bases">
+      <button class="rail-btn" aria-haspopup="true" aria-expanded="false" aria-label="Bases de cálculo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m12 3 9 4.8-9 4.8-9-4.8z"/><path d="m3 12.4 9 4.8 9-4.8"/><path d="m3 17 9 4.8 9-4.8"/></svg>
+        <i class="pt" aria-hidden="true"></i>
+      </button>
+      <div class="fly">
+        <div class="fly-h">Bases de cálculo</div>
+        <button data-v="ccts">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>
+          Convenções, escalas e turnos <span class="badge" id="nCct">0</span></button>
+        <button data-v="equipamentos">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20.6 8.4a2 2 0 0 0 0-2.8l-2.2-2.2a2 2 0 0 0-2.8 0L3 16v5h5z"/><path d="M14 5l5 5"/></svg>
+          Equipamentos <span class="badge" id="nEquip">0</span></button>
+        <button data-v="materiais">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="M3 7.5 12 12l9-4.5M12 12v9"/></svg>
+          Materiais e insumos <span class="badge" id="nMat">0</span></button>
+      </div>
+    </div>
+
+    <!-- Dashboard: um item, um clique. Eram dois — "painel de indicadores" e
+         "relatórios" — que mostravam recortes do mesmo dado e obrigavam a
+         escolher onde procurar antes de procurar. -->
+    <div class="rail-item" data-g="analise">
+      <button class="rail-btn" data-v="dashboard" aria-label="Dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
+      </button>
+      <div class="fly solo" role="tooltip"><b>Dashboard</b></div>
+    </div>
+  </nav>
+
+  <div class="rail-foot">
+    <div class="rail-item" data-g="sistema">
+      <button class="rail-btn" data-v="configuracoes" aria-label="Configurações">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.5-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 4.6a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 11a2 2 0 1 1 0 4z"/></svg>
+      </button>
+      <div class="fly solo" role="tooltip"><b>Configurações</b></div>
+    </div>
+    <!-- O usuário também é um grupo: o nome, o papel e a saída moram no
+         painel, não no trilho. -->
+    <div class="rail-item has-menu" data-g="usuario">
+      <button class="rail-btn av" aria-haspopup="true" aria-expanded="false" aria-label="Sua conta">
+        <span id="meAvatar">--</span>
+      </button>
+      <div class="fly fly-up">
+        <div class="fly-me">
+          <b id="meName">Carregando…</b>
+          <span id="meEmail"></span>
+          <span class="papel" id="mePapel"></span>
+        </div>
+        <button data-acao="sair">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+          Sair da conta</button>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<div class="main">
+  <!-- A barra do topo saiu. Ela ocupava 62px de altura em TODA tela para
+       repetir, em corpo miúdo, o nome do item que já está aceso no menu — e
+       ainda empurrava o conteúdo para baixo da dobra. O que era útil nela
+       mudou de lugar: o "Novo" virou botão do trilho, e cada tela abre com a
+       sua própria barra de ferramentas, que é onde a ação daquela tela mora.
+       Tela de registro (proposta, lead, contrato) abre com o "← Voltar", que
+       diz de onde se veio melhor do que uma migalha estática dizia. -->
+  <div class="page" id="page"></div>
+</div>
+</div><!-- /#appRoot -->
+
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 6 9 17l-5-5"/></svg>
+  <span id="toastMsg"></span></div>
+<!-- Fila de geração de documentos: o PDF leva segundos e não pode mais prender
+     a tela inteira enquanto sai. -->
+<div class="jobs" id="jobs"></div>
+
+<script>
+  window.__SUPABASE_URL__ = "{{ supabase_url }}";
+  window.__SUPABASE_ANON_KEY__ = "{{ supabase_anon_key }}";
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Módulos na ordem de dependência (item 5.1: o arquivo único de 144 KB virou
+     estes oito). São <script> comuns, não ESM: o app roda a partir de file://
+     em máquina de vendedor sem servidor de módulos, e CORS de módulo quebraria
+     isso sem ganho nenhum aqui. -->
+<script src="{{ url_for('static', filename='js/util.js') }}?v={{ versao_estatica() }}"></script>
+<script src="{{ url_for('static', filename='js/calculo.js') }}?v={{ versao_estatica() }}"></script>
+<script src="{{ url_for('static', filename='js/db.js') }}?v={{ versao_estatica() }}"></script>
+<script src="{{ url_for('static', filename='js/ui.js') }}?v={{ versao_estatica() }}"></script>
+<script src="{{ url_for('static', filename='js/graficos.js') }}?v={{ versao_estatica() }}"></script>
+<script src="{{ url_for('static', filename='js/views-inicio.js') }}?v={{ versao_estatica() }}"></script>
+<script src="{{ url_for('static', filename='js/views-crm.js') }}?v={{ versao_estatica() }}"></script>
+<script src="{{ url_for('static', filename='js/views-proposta.js') }}?v={{ versao_estatica() }}"></script>
+<script src="{{ url_for('static', filename='js/views-contratos.js') }}?v={{ versao_estatica() }}"></script>
+<script src="{{ url_for('static', filename='js/views-cadastros.js') }}?v={{ versao_estatica() }}"></script>
+<script src="{{ url_for('static', filename='js/forms.js') }}?v={{ versao_estatica() }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}?v={{ versao_estatica() }}"></script>
+</body>
+</html>

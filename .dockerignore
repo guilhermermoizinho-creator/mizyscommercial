@@ -1,0 +1,25 @@
+# O .env tem chave de serviço do Supabase e senha do e-mail. Ele NUNCA entra na
+# imagem: quem passa essas variáveis é a plataforma (ou o `docker run --env-file`).
+.env
+.env.*
+!.env.example
+
+.git
+.gitignore
+.venv
+venv
+__pycache__
+**/__pycache__
+*.pyc
+.pytest_cache
+.vscode
+
+# Nada disso roda em produção: são os testes, os documentos de exemplo e o
+# gerador do manual — 500 KB de PDF e DOCX que só existem para leitura humana.
+tests
+docs/Exemplo_Proposta_Comercial.pdf
+docs/Exemplo_Proposta_Comercial.pptx
+docs/Manual_Mizys_CRM.docx
+docs/gerar_manual.py
+docs/gerar_proposta_exemplo.py
+convencoes

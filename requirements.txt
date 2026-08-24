@@ -1,0 +1,20 @@
+Flask==3.0.3
+python-dotenv==1.0.1
+python-pptx==1.0.2
+
+# Servidor WSGI de verdade. O embutido do Flask atende uma requisição por vez,
+# sem timeout e sem limite de fila — e avisa isso em toda inicialização.
+# Waitress é WSGI puro e funciona no Windows sem compilar nada.
+waitress==3.0.0
+
+# A conversão PPTX -> PDF é feita pelo LIBREOFFICE, que não se instala por pip:
+# baixe em https://www.libreoffice.org/download/ (o servidor acha o soffice
+# sozinho pelo registro do Windows; fora do padrão, use LIBREOFFICE_PATH).
+#
+# pywin32 só é necessário para o caminho alternativo pelo PowerPoint, ligado
+# com PDF_MOTOR=auto ou PDF_MOTOR=powerpoint no .env.
+pywin32==312; sys_platform == "win32"
+
+# Opcional: só é usado para encaixar o logo da capa sem distorcer. Sem Pillow,
+# a imagem é esticada até a caixa reservada.
+Pillow>=10.0

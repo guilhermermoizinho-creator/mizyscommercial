@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+
+# O cloudflared tem 54 MB e se baixa de novo em 10 segundos: não versiona.
+tunel/cloudflared.exe
+.venv/
+.pytest_cache/
+.vscode/
