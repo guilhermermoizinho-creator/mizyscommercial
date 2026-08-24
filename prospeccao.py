@@ -80,6 +80,50 @@ def _http(url, dados=None, headers=None, timeout=30, limite=600000):
         return r.status, r.read(limite)
 
 
+def _abrir_site(url, timeout=20, limite=500000):
+    """Abre a pagina do jeito que um navegador abriria.
+
+    Quatro coisas derrubavam sites que estao no ar, e cada uma custou uma
+    empresa na primeira rodada:
+
+      · redirecao 302 que o urllib devolve como erro em vez de seguir;
+      · `www.` num dominio que so responde sem ele — e vice-versa;
+      · http quando o https nao sobe;
+      · Cloudflare devolvendo 525 no primeiro toque e 200 no segundo.
+
+    Devolve (html, erro, url_que_funcionou). Nunca levanta: site fora do ar
+    nao pode derrubar a rodada inteira.
+    """
+    bruto = (url or "").strip()
+    if not bruto:
+        return "", "sem endereco", ""
+    sem_esquema = re.sub(r"^https?://", "", bruto).rstrip("/")
+    sem_www = sem_esquema[4:] if sem_esquema.lower().startswith("www.") else sem_esquema
+    com_www = sem_esquema if sem_esquema.lower().startswith("www.") else "www." + sem_esquema
+
+    tentativas = []
+    for host in dict.fromkeys((sem_esquema, sem_www, com_www)):
+        tentativas += ["https://" + host, "http://" + host]
+
+    ultimo = ""
+    for tentativa in tentativas:
+        for _ in range(4):          # ate 4 saltos de redirecao
+            try:
+                _, corpo = _http(tentativa, timeout=timeout, limite=limite)
+                return corpo.decode("utf-8", "replace"), "", tentativa
+            except urllib.error.HTTPError as exc:
+                destino = exc.headers.get("Location") if exc.headers else None
+                if exc.code in (301, 302, 303, 307, 308) and destino:
+                    tentativa = urllib.parse.urljoin(tentativa, destino)
+                    continue
+                ultimo = "HTTP %s" % exc.code
+                break
+            except Exception as exc:  # noqa: BLE001 — DNS, TLS, timeout
+                ultimo = "%s: %s" % (type(exc).__name__, str(exc)[:60])
+                break
+    return "", ultimo or "nao abriu", ""
+
+
 def _json(url, dados=None, headers=None, timeout=30):
     st, corpo = _http(url, dados, headers, timeout)
     return st, json.loads(corpo.decode("utf-8", "replace") or "{}")
@@ -159,7 +203,11 @@ RE_EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 # E-mail de quem fez o site, de banco de imagem e de rastreador não é contato
 # comercial — e é o que mais aparece em rodapé.
 EMAIL_LIXO = ("sentry", "wixpress", "example.", "godaddy", "@2x", "cloudflare",
-              "sentry.io", "wordpress", "elementor", ".png", ".jpg", "@sentry")
+              "sentry.io", "wordpress", "elementor", ".png", ".jpg", "@sentry",
+              # Placeholder que a propria empresa deixa no formulario. Aparece
+              # tanto quanto e-mail de verdade, e vai direto para o lead.
+              "naoinformado", "nao-informado", "exemplo@", "seuemail",
+              "seunome", "email@email", "teste@", "dominio.com")
 
 
 def _digitos(s):
@@ -220,6 +268,8 @@ def _telefone_plausivel(meio: str) -> bool:
     isto entrava "(17) 8654-7485" e "(71) 1536-3924", que são pedaços de outros
     números com um DDD válido por acaso na frente.
     """
+    if len(set(meio)) == 1:
+        return False          # 99999 e 0000 sao mascara de formulario, nao numero
     if len(meio) == 5:
         return meio[0] == "9"
     if len(meio) == 4:
@@ -227,7 +277,38 @@ def _telefone_plausivel(meio: str) -> bool:
     return False
 
 
-def ler_site(url: str, paginas_extras=("/contato", "/fale-conosco", "/sobre")) -> dict:
+# A LGPD obriga a informar quem e o controlador dos dados, com CNPJ. Por isso
+# a pagina de privacidade acha CNPJ que a home e a de contato nao tem.
+# Quatro caminhos, nao treze: cada um custa uma requisicao, e treze vezes 34
+# sites com timeout de 15 s passa de nove minutos numa rodada. Estes quatro
+# cobrem quase todo CNPJ e e-mail que existe para achar — a pagina de
+# privacidade entra porque a LGPD obriga a publicar o CNPJ do controlador.
+PAGINAS = ("/contato", "/politica-de-privacidade", "/quem-somos", "/sobre")
+
+
+def _pegar(url, timeout=8, limite=400000):
+    """Uma URL so, mas seguindo redirecao. Devolve o HTML ou string vazia.
+
+    Subpagina que redireciona (/contato -> /contato/) e a regra, nao a
+    excecao, e sem seguir o salto a pagina de contato — onde moram o e-mail
+    comercial e, por causa da LGPD, o CNPJ — nunca era lida.
+    """
+    for _ in range(3):
+        try:
+            _, corpo = _http(url, timeout=timeout, limite=limite)
+            return corpo.decode("utf-8", "replace")
+        except urllib.error.HTTPError as exc:
+            destino = exc.headers.get("Location") if exc.headers else None
+            if exc.code in (301, 302, 303, 307, 308) and destino:
+                url = urllib.parse.urljoin(url, destino)
+                continue
+            return ""
+        except Exception:  # noqa: BLE001
+            return ""
+    return ""
+
+
+def ler_site(url: str, paginas_extras=PAGINAS) -> dict:
     """Puxa CNPJ, e-mails, telefones e redes sociais do site da empresa.
 
     Falha em silêncio: site fora do ar não pode derrubar a rodada inteira. A
@@ -237,16 +318,24 @@ def ler_site(url: str, paginas_extras=("/contato", "/fale-conosco", "/sobre")) -
     achado = {"cnpjs": [], "emails": [], "telefones": [], "redes": {}, "erro": ""}
     if not url:
         return achado
-    base = url.rstrip("/")
+    # O endereco bom e descoberto UMA vez, na home. Repetir a descoberta em
+    # cada subpagina multiplicava por seis o numero de requisicoes e fazia uma
+    # rodada de 34 sites passar de dez minutos.
+    home, erro, url_boa = _abrir_site(url.rstrip("/"))
+    if not home:
+        achado["erro"] = erro
+        return achado
+    raiz = re.match(r"^(https?://[^/]+)", url_boa)
+    base = raiz.group(1) if raiz else url.rstrip("/")
+
     vistos_c, vistos_e, vistos_t = [], [], []
     for sufixo in ("",) + tuple(paginas_extras):
-        try:
-            _, corpo = _http(base + sufixo, timeout=20, limite=500000)
-            html = corpo.decode("utf-8", "replace")
-        except Exception as exc:  # noqa: BLE001 — 404, DNS, TLS, timeout
-            if not sufixo:
-                achado["erro"] = "%s: %s" % (type(exc).__name__, str(exc)[:70])
-            continue
+        if sufixo:
+            html = _pegar(base + sufixo)
+            if not html:
+                continue
+        else:
+            html = home
         for m in RE_CNPJ.finditer(html):
             c = "".join(m.groups())
             if cnpj_valido(c) and c not in vistos_c:
@@ -260,6 +349,8 @@ def ler_site(url: str, paginas_extras=("/contato", "/fale-conosco", "/sobre")) -
         for ddd, meio, fim in RE_TEL.findall(limpo):
             if int(ddd) not in DDDS or not _telefone_plausivel(meio):
                 continue
+            if len(set(fim)) == 1 and fim[0] in "09":
+                continue      # ...-9999 e ...-0000 pelo mesmo motivo
             t = "(%s) %s-%s" % (ddd, meio, fim)
             if t not in vistos_t:
                 vistos_t.append(t)
