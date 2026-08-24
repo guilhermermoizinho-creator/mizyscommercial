@@ -215,6 +215,12 @@ def _slide_ligado(nome, escolhas, tem_equipamentos):
     # Padrão: tudo ligado, menos o de equipamentos quando não há equipamento.
     if nome == "equipamentos":
         return tem_equipamentos
+    # "Nossa gente" é o único slide que o CRM não consegue preencher sozinho:
+    # ele quer a foto de cada colaborador, e não há foto no banco. Ligado por
+    # padrão, ele sairia com quatro molduras vazias na proposta do cliente.
+    # Quem montar as fotos no modelo liga o slide em Configurações.
+    if nome == "gente":
+        return False
     return True
 
 
@@ -285,6 +291,7 @@ def gerar_pptx(dados, destino):
     postos = dados.get("postos") or []
     equipamentos = dados.get("equipamentos") or []
     beneficios = dados.get("beneficios") or []
+    salarios = dados.get("salarios") or []
     escolhas = {str(k).lower(): v for k, v in (dados.get("slides") or {}).items()}
     tem_eq = bool(dados.get("tem_equipamentos", equipamentos))
     tem_ben = bool(dados.get("tem_beneficios", beneficios))
@@ -306,7 +313,8 @@ def gerar_pptx(dados, destino):
     #    ainda precisam dos {CHAVE} intactos para serem preenchidas.
     for slide in slides:
         _expandir_linhas(slide, "{QTD}", postos, {
-            "QTD": "qtd", "CARGO": "cargo", "ESCALA_TURNO": "escala_turno",
+            "QTD": "qtd", "QTD_FUNC": "qtd_func",
+            "CARGO": "cargo", "ESCALA_TURNO": "escala_turno",
             "ADICIONAIS": "adicionais", "OBS_POSTO": "obs",
             "VALOR_UNITARIO": "valor_unitario", "VALOR_MENSAL": "valor_mensal",
         })
@@ -318,15 +326,27 @@ def gerar_pptx(dados, destino):
             "BEN_NOME": "nome", "BEN_BASE": "base", "BEN_VALOR": "valor",
             "BEN_DESCONTO": "desconto", "BEN_CUSTO": "custo",
         })
+        # Quadro de salários por cargo, do modelo de facilities. É outra vista
+        # dos mesmos benefícios: o {BEN_NOME} lista benefício a benefício, este
+        # abre por cargo, em colunas fixas.
+        _expandir_linhas(slide, "{SAL_CARGO}", salarios, {
+            "SAL_CARGO": "cargo", "SAL_SALARIO": "salario",
+            "SAL_ADICIONAIS": "adicionais", "SAL_REFEICAO": "refeicao",
+            "SAL_CESTA": "cesta", "SAL_SAUDE": "saude",
+            "SAL_SINDICATO": "sindicato",
+        })
 
     # 3. Logo e campos.
     campos = dict(dados.get("campos") or {})
-    for slide in slides:
+    for numero, slide in enumerate(slides, 1):
         if logo:
             _aplicar_logo(slide, logo)
         else:
             _limpar_marcadores(slide)
-        _substituir_no_slide(slide, campos)
+        # {PAGINA} só pode ser resolvido aqui: os slides desligados já saíram,
+        # então este é o primeiro momento em que a numeração é a de verdade.
+        # Modelo que numera à mão não sofre disto — e também não acerta.
+        _substituir_no_slide(slide, dict(campos, PAGINA=numero))
 
     prs.save(destino)
     return destino

@@ -324,5 +324,111 @@ class TestPPTX(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
 
+class TestModeloFacilities(unittest.TestCase):
+    """O modelo novo, gerado por modelo_ppt/preparar_modelo.py.
+
+    Ele tem 57 marcadores espalhados por 21 slides e três tabelas que crescem.
+    O jeito de isso dar errado não é estourar exceção: é sair um `{QTD_FUNC}`
+    literal no meio da tabela de cargos, no PDF que já foi para o cliente —
+    que foi exatamente o que aconteceu na primeira montagem. Por isso o teste
+    lê o arquivo gerado em vez de confiar no código que o gerou.
+    """
+
+    MODELO = "proposta_facilities.pptx"
+
+    def setUp(self):
+        caminho = os.path.join(os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__))), "modelo_ppt", self.MODELO)
+        if not os.path.isfile(caminho):
+            self.skipTest("modelo ausente — rode modelo_ppt/preparar_modelo.py")
+        self.sb = base()
+        p, ctx, c = documentos.carregar(self.sb, 1)
+        self.dados = documentos.dados_documento(self.sb, p, ctx, c)
+        self.dados["modelo"] = self.MODELO
+        self.tmp = tempfile.mkdtemp(prefix="mizys_facilities_")
+        self.arquivo = os.path.join(self.tmp, "p.pptx")
+
+    def _prs(self):
+        from pptx import Presentation
+        ppt.gerar_pptx(self.dados, self.arquivo)
+        return Presentation(self.arquivo)
+
+    def _texto(self, slide):
+        partes = []
+        for f in ppt._percorrer_formas(slide.shapes):
+            if f.has_text_frame:
+                partes.append(f.text_frame.text)
+            if getattr(f, "has_table", False) and f.has_table:
+                for linha in f.table.rows:
+                    partes.append(" | ".join(cel.text for cel in linha.cells))
+        return "\n".join(partes)
+
+    def test_nao_sobra_placeholder(self):
+        texto = "\n".join(self._texto(s) for s in self._prs().slides)
+        sobrou = sorted(set(re.findall(r"\{[A-Z_0-9]+\}", texto)))
+        self.assertEqual(sobrou, [], "placeholders não substituídos: %s" % sobrou)
+
+    def test_nao_sobra_marcador_do_designer(self):
+        """`[ NOME DO CLIENTE ]` e afins têm que ter virado {CHAVE}."""
+        texto = "\n".join(self._texto(s) for s in self._prs().slides)
+        sobrou = sorted(set(re.findall(r"\[ [A-ZÇÃÕÁÉÍÓÚÂÊÔ/ ]{3,40} \]", texto)))
+        self.assertEqual(sobrou, [], "marcadores do modelo intactos: %s" % sobrou)
+
+    def test_uma_linha_por_cargo_no_quadro_de_salarios(self):
+        esperado = len(self.dados["salarios"])
+        self.assertGreater(esperado, 0, "o teste não valeria nada sem cargo")
+        for slide in self._prs().slides:
+            if "Salários e benefícios" not in self._texto(slide):
+                continue
+            tabela = next(f.table for f in ppt._percorrer_formas(slide.shapes)
+                          if getattr(f, "has_table", False) and f.has_table)
+            # Uma de cabeçalho + uma por cargo.
+            self.assertEqual(len(tabela.rows), esperado + 1)
+            return
+        self.fail("slide de salários não foi encontrado")
+
+    def test_postos_e_funcionarios_sao_colunas_diferentes(self):
+        """Um posto 12x36 precisa de mais de um funcionário — e o quadro diz."""
+        linha = self.dados["postos"][0]
+        self.assertIn("qtd_func", linha)
+        texto = "\n".join(self._texto(s) for s in self._prs().slides)
+        self.assertIn(str(linha["qtd_func"]), texto)
+
+    def test_paginas_sao_sequenciais(self):
+        """Slide opcional que sai não pode deixar buraco na numeração."""
+        prs = self._prs()
+        numeros = []
+        for slide in prs.slides:
+            for f in ppt._percorrer_formas(slide.shapes):
+                if not f.has_text_frame:
+                    continue
+                if (f.left or 0) < 10 * 914400 or (f.top or 0) < 6.8 * 914400:
+                    continue
+                t = f.text_frame.text.strip()
+                if t.isdigit():
+                    numeros.append(int(t))
+        self.assertTrue(numeros, "nenhum rodapé numerado")
+        self.assertEqual(numeros, sorted(numeros))
+        self.assertEqual(len(numeros), len(set(numeros)), "página repetida")
+        self.assertLessEqual(max(numeros), len(prs.slides))
+
+    def test_slide_de_fotos_nasce_desligado(self):
+        """Sem foto de colaborador no banco, ele sairia com molduras vazias."""
+        marcadores = [ppt.marcador_do_slide(s) for s in self._prs().slides]
+        self.assertNotIn("gente", marcadores)
+
+    def test_missao_em_branco_cai_na_redacao_do_modelo(self):
+        """Substituição de {CHAVE} é cega: sem isto o slide sairia vazio."""
+        self.sb.t["configuracoes"] = [c for c in self.sb.t["configuracoes"]
+                                      if c["chave"] != "empresa_missao"]
+        p, ctx, c = documentos.carregar(self.sb, 1)
+        dados = documentos.dados_documento(self.sb, p, ctx, c)
+        self.assertEqual(dados["campos"]["MISSAO"], documentos.MISSAO_PADRAO)
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1408,10 +1408,21 @@ function painelResumo(p, c, encSoma, cct){
 function abaDocumento(p, c, lead){
   const modelos = state.modelos || [];
   const slides = p.slides || {};
-  const nomes = [['capa','Capa'],['missao','Missão, visão e valores'],['cliente','A quem se destina'],
-    ['escopo','Objeto da proposta'],['postos','Dimensionamento da equipe'],
-    ['equipamentos','Equipamentos e recursos'],['resumo','Resumo do investimento'],
-    ['condicoes','Condições comerciais'],['final','Encerramento']];
+  /* Os slides opcionais vêm do modelo escolhido, não de uma lista fixa: cada
+     .pptx tem os seus, anotados nele. O rótulo é só cosmético — nome que não
+     estiver no dicionário aparece capitalizado, e continua funcionando. */
+  const ROTULOS = {
+    capa:'Capa', missao:'Missão, visão e valores', cliente:'A quem se destina',
+    escopo:'Objeto da proposta', postos:'Dimensionamento da equipe',
+    equipamentos:'Materiais e equipamentos', resumo:'Resumo do investimento',
+    condicoes:'Condições comerciais', final:'Encerramento',
+    sobre:'Quem somos', gente:'Nossa gente (precisa das fotos)',
+    servicos:'O que entregamos', diferencial:'Nosso diferencial',
+    tecnologia:'Tecnologia na operação', beneficios:'Salários e benefícios',
+  };
+  const modeloAtual = p.modelo_ppt || CFG('ppt_modelo');
+  const doModelo = (state.slidesPorModelo || {})[modeloAtual] || [];
+  const nomes = doModelo.map(k => [k, ROTULOS[k] || (k.charAt(0).toUpperCase() + k.slice(1))]);
   const docs = state.docs || null;
 
   return `<div class="grid2">
@@ -1426,7 +1437,13 @@ function abaDocumento(p, c, lead){
       ${nota('Coloque outros .pptx em modelo_ppt/ para atender condomínio, indústria e shopping com layouts diferentes.')}</div>
      <div class="sublabel">Slides opcionais</div>
      <div class="chips">${nomes.map(([k,r]) => {
-       const ligado = k in slides ? !!slides[k] : (k === 'equipamentos' ? c.equipamentos.length > 0 : true);
+       /* Estes padrões são os mesmos do _slide_ligado() no ppt.py. Se os dois
+          discordarem, a caixa aparece marcada e o slide não sai no arquivo —
+          e ninguém descobre até abrir o PDF. */
+       const ligado = k in slides ? !!slides[k]
+         : k === 'equipamentos' ? c.equipamentos.length > 0
+         : k === 'gente' ? false
+         : true;
        return `<label class="chipbox ${ligado ? 'on' : ''}">
         <input type="checkbox" ${ligado ? 'checked' : ''} data-mudar="alternarSlide" data-slide="${esc(k)}">
         ${esc(r)}</label>`; }).join('')}</div>

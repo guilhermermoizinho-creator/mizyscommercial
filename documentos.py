@@ -22,6 +22,7 @@ import datetime as _dt
 import os
 import re
 import secrets
+import unicodedata as _ud
 
 import calculo
 import ppt
@@ -32,6 +33,16 @@ MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho",
 
 # Enquanto está aqui, ainda dá para mexer à vontade. Fora daqui, congela.
 STATUS_RASCUNHO = "Rascunho"
+
+# A redação que o modelo de facilities traz de fábrica. Ela só aparece enquanto
+# Configurações → Empresa estiver em branco: qualquer texto lá substitui esta.
+# Existe porque um slide de missão vazio é pior do que um genérico — e porque a
+# substituição de {CHAVE} é cega, ela apagaria o texto do modelo.
+MISSAO_PADRAO = ("Tornar ambientes e rotinas mais seguros, agradáveis e "
+                 "eficientes, para que as pessoas possam viver e trabalhar "
+                 "com mais qualidade.")
+VISAO_PADRAO = ("Buscar continuamente a excelência na capacitação das equipes, "
+                "na gestão de processos e no uso de novas tecnologias.")
 
 
 class ErroProposta(Exception):
@@ -209,13 +220,28 @@ def dados_documento(sb: Supabase, proposta: dict, ctx: dict, c: dict) -> dict:
         "EMPRESA_EMAIL": cfg.get("empresa_email", ""),
         "EMPRESA_SITE": cfg.get("empresa_site", ""),
         "EMPRESA_ENDERECO": cfg.get("empresa_endereco", ""),
-        "MISSAO": cfg.get("empresa_missao", ""),
-        "VISAO": cfg.get("empresa_visao", ""),
+        "EMPRESA_WHATSAPP": cfg.get("empresa_whatsapp") or cfg.get("empresa_telefone", ""),
+        # Institucionais do modelo de facilities. Vazios, o slide "Quem somos"
+        # imprimiria "Desde  , atuamos..." — por isso caem num travessão.
+        "EMPRESA_ANO": cfg.get("empresa_ano") or "—",
+        "EMPRESA_COLABORADORES": cfg.get("empresa_colaboradores") or "—",
+        "EMPRESA_CLIENTES": cfg.get("empresa_clientes") or "—",
+        "EMPRESA_CERTIFICACOES": cfg.get("empresa_certificacoes") or "—",
+        # Missão, visão e valores em branco NÃO viram texto vazio: o modelo já
+        # traz uma redação padrão, e apagá-la deixaria o slide oco. Quem
+        # preenche Configurações → Empresa manda; quem não preenche fica com a
+        # do modelo (veja modelo_ppt/preparar_modelo.py).
+        "MISSAO": cfg.get("empresa_missao") or MISSAO_PADRAO,
+        "VISAO": cfg.get("empresa_visao") or VISAO_PADRAO,
         "VALORES": "\n".join(s.strip() for s in
                              (cfg.get("empresa_valores", "") or "").split(";") if s.strip()),
         "SEGMENTO": cfg.get("segmento", ""),
         "NUMERO": proposta.get("numero", ""),
         "VERSAO": proposta.get("versao", 1),
+        # O responsável pela proposta, que assina a carta de apresentação.
+        "VENDEDOR": proposta.get("owner") or cfg.get("empresa_fantasia", ""),
+        "VENDEDOR_CARGO": cfg.get("vendedor_cargo") or "Consultor comercial",
+        "DATA": _data(proposta.get("emissao")),
         "DATA_EXTENSO": _data_extenso(proposta.get("emissao"), cfg.get("empresa_cidade", "")),
         "CLIENTE": (lead or {}).get("empresa") or "—",
         "CNPJ": (lead or {}).get("cnpj") or "—",
@@ -259,6 +285,10 @@ def dados_documento(sb: Supabase, proposta: dict, ctx: dict, c: dict) -> dict:
 
     postos = [{
         "qtd": str(ci["postos"]),
+        # Postos e funcionários não são a mesma conta: um posto 12x36 precisa
+        # de mais de um funcionário para cobrir a escala, e é essa diferença
+        # que explica o preço unitário para o cliente.
+        "qtd_func": _n(round(ci["func"], 2)),
         # A observação do posto entra como segunda linha da célula do cargo —
         # o campo existia no schema desde sempre e não aparecia em lugar
         # nenhum (P9.8). Sem observação, a célula continua com uma linha só.
@@ -357,6 +387,44 @@ def dados_documento(sb: Supabase, proposta: dict, ctx: dict, c: dict) -> dict:
             total_ben_c += b["custo_c"]
     campos["TOTAL_BENEFICIOS"] = money(total_ben_c)
 
+    # ── Salários e benefícios, uma linha por cargo ──────────────────────────
+    # O modelo de facilities pede este quadro com colunas fixas: salário,
+    # adicionais, vale-refeição, cesta, assistência e sindicato. Os benefícios
+    # da CCT têm nome livre, então o encaixe é por palavra-chave.
+    #
+    # Benefício que não cai em nenhuma coluna (vale-transporte é o caso comum)
+    # **continua somando no preço** — ele entra pelo custo do posto, como
+    # sempre. Só não ganha coluna própria neste quadro, porque quem decidiu as
+    # colunas foi o desenho do modelo. Se algum dia precisar aparecer, é
+    # acrescentar a coluna no modelo e uma chave aqui.
+    def _casa(nome, *palavras):
+        n = _sem_acento(nome).lower()
+        return any(p in n for p in palavras)
+
+    salarios = []
+    for ci in c["itens"]:
+        baldes = {"refeicao": 0, "cesta": 0, "saude": 0, "sindicato": 0}
+        for b in ci.get("beneficios") or []:
+            nome = b.get("nome") or ""
+            if _casa(nome, "refeic", "aliment"):
+                baldes["refeicao"] += b["valor_c"]
+            elif _casa(nome, "cesta"):
+                baldes["cesta"] += b["valor_c"]
+            elif _casa(nome, "medic", "odont", "saude", "farmac"):
+                baldes["saude"] += b["valor_c"]
+            elif _casa(nome, "sindic", "assistencial", "confederativ"):
+                baldes["sindicato"] += b["valor_c"]
+        salarios.append({
+            "cargo": ci["cargo"].get("nome", ""),
+            "salario": money(ci["base_c"]),
+            "adicionais": money(ci["valor_adic_c"] + ci["valor_noturno_c"])
+                          if (ci["valor_adic_c"] + ci["valor_noturno_c"]) else "—",
+            "refeicao": money(baldes["refeicao"]) if baldes["refeicao"] else "—",
+            "cesta": money(baldes["cesta"]) if baldes["cesta"] else "—",
+            "saude": money(baldes["saude"]) if baldes["saude"] else "—",
+            "sindicato": money(baldes["sindicato"]) if baldes["sindicato"] else "—",
+        })
+
     return {
         "arquivo": _nome_arquivo(proposta, lead),
         "modelo": proposta.get("modelo_ppt") or cfg.get("ppt_modelo") or "mizys_proposta.pptx",
@@ -366,10 +434,17 @@ def dados_documento(sb: Supabase, proposta: dict, ctx: dict, c: dict) -> dict:
         "equipamentos": equipamentos,
         "materiais": materiais,
         "beneficios": beneficios,
+        "salarios": salarios,
         "tem_equipamentos": bool(equipamentos),
         "tem_materiais": bool(materiais),
         "tem_beneficios": bool(beneficios),
     }
+
+
+def _sem_acento(texto):
+    """"Vale-refeição" e "Vale-refeicao" têm que casar com a mesma coluna."""
+    return "".join(ch for ch in _ud.normalize("NFD", str(texto or ""))
+                   if _ud.category(ch) != "Mn")
 
 
 def _n(v):
@@ -468,3 +543,25 @@ def modelos_disponiveis() -> list[str]:
         return []
     return sorted(f for f in os.listdir(ppt.MODELOS_DIR)
                   if f.lower().endswith(".pptx") and not f.startswith("~$"))
+
+
+def slides_do_modelo(nome: str) -> list[str]:
+    """Os slides que este modelo deixa ligar e desligar, na ordem em que saem.
+
+    Vem das anotações `SLIDE:<nome>` do próprio arquivo. A lista já esteve
+    fixa no JavaScript, com os nomes do primeiro modelo — e ao trocar de
+    modelo a tela passou a oferecer interruptor para slide que não existia
+    mais, escondendo os que existiam. Quem sabe quais slides um modelo tem é
+    o modelo.
+    """
+    try:
+        from pptx import Presentation
+        prs = Presentation(ppt.caminho_modelo(nome))
+    except Exception:  # noqa: BLE001 — modelo ausente ou ilegível
+        return []
+    vistos = []
+    for slide in prs.slides:
+        marca = ppt.marcador_do_slide(slide)
+        if marca and marca not in vistos:
+            vistos.append(marca)
+    return vistos

@@ -115,7 +115,14 @@ function depoisDoRender(){
      && !Historico.cache[Historico.chave('Contrato', state.id)])
     carregarHistorico('Contrato', state.id);
   if(view === 'propostaEditor' && state.gaveta === 'documento' && !state.modelos)
-    api('/api/modelos').then(r => { state.modelos = r.modelos; render(); }).catch(() => {});
+    api('/api/modelos').then(r => {
+      state.modelos = r.modelos;
+      // Cada modelo tem os seus slides opcionais, lidos das anotações do
+      // arquivo. Sem isto a tela ofereceria interruptor de um modelo para
+      // outro — e o slide continuaria saindo, porque o nome não bate.
+      state.slidesPorModelo = r.slides_por_modelo || {};
+      render();
+    }).catch(() => {});
 }
 
 function contadores(){

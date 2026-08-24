@@ -94,7 +94,9 @@ app.py                     Flask: autenticação, rotas de documento, e-mail, ac
   ├── correio.py           envio por SMTP
   └── supa.py              cliente REST do Supabase
 
-modelo_ppt/build_modelo.py gera o .pptx modelo (9 slides com {CHAVE})
+modelo_ppt/proposta_facilities.pptx  modelo em uso (21 slides, facilities e seguranca)
+modelo_ppt/preparar_modelo.py    gera esse modelo a partir do deck em origem/
+modelo_ppt/build_modelo.py       gera o modelo antigo, mizys_proposta.pptx
 supabase/schema.sql        banco completo: tabelas, RLS por papel, triggers, storage
 supabase/migracao_materiais.sql  Módulo 5 (materiais) e margem alvo, para base já existente
 templates/my_crm.html      casca da SPA
@@ -287,19 +289,38 @@ Cada geração é guardada no Supabase Storage, versionada e ligada à proposta 
 é o comprovante do que o cliente recebeu. O histórico fica na aba **Documento e
 envio**.
 
-**Modelo de PPT.** `modelo_ppt/mizys_proposta.pptx` é o padrão. Coloque outros
-`.pptx` na mesma pasta (condomínio, indústria, shopping) e escolha por proposta.
-Para regerar o modelo padrão depois de mexer no desenho:
+**Modelo de PPT.** O padrão é `modelo_ppt/proposta_facilities.pptx` — 21
+slides de facilities e segurança. Coloque outros `.pptx` na mesma pasta
+(condomínio, indústria, shopping) e escolha por proposta.
+
+Esse modelo **não é editado à mão**: ele é gerado a partir do deck do designer,
+que fica em `modelo_ppt/origem/` com marcadores humanos (`[ NOME DO CLIENTE ]`).
+Mexeu no desenho, rode de novo:
 
 ```bash
-python modelo_ppt/build_modelo.py
+python modelo_ppt/preparar_modelo.py     # deck em origem/ -> modelo preenchível
+python modelo_ppt/build_modelo.py        # o modelo antigo, mizys_proposta.pptx
 ```
 
+O deck de origem mora numa subpasta de propósito: a raiz de `modelo_ppt/` é o
+que o CRM oferece no seletor, e um deck sem marcador nenhum listado ali geraria
+proposta com "[ NOME DO CLIENTE ]" impresso.
+
 - Placeholders são `{CHAVE}` no texto; a lista sai de `documentos.dados_documento`.
-- Linhas de tabela que crescem: a linha com `{QTD}` (postos) e `{EQ_QTD}`
-  (equipamentos) é duplicada uma vez por registro.
+- Linhas de tabela que crescem: a linha com `{QTD}` (postos), `{EQ_QTD}`
+  (materiais e equipamentos) e `{SAL_CARGO}` (salários por cargo) é duplicada
+  uma vez por registro.
+- `{PAGINA}` é o número do rodapé, resolvido **depois** de os slides opcionais
+  saírem — modelo que numera à mão pula de 16 para 18 na cara do cliente.
+- Campo vazio vira campo vazio: `{CHAVE}` é substituído sem dó. As exceções são
+  missão e visão, que caem na redação do modelo quando Configurações → Empresa
+  está em branco (`MISSAO_PADRAO` em `documentos.py`), porque um slide oco é
+  pior do que um genérico.
 - **Slides opcionais**: o nome do slide vive nas *anotações* como
-  `SLIDE:equipamentos`. Não é impresso, não aparece na apresentação e sobrevive
+  `SLIDE:equipamentos`. A tela lê essa lista **do arquivo escolhido**
+  (`/api/modelos`), então cada modelo oferece os interruptores que realmente
+  tem. `gente` nasce desligado: é o único slide que o CRM não preenche sozinho,
+  porque quer a foto de cada colaborador. Não é impresso, não aparece na apresentação e sobrevive
   a qualquer reescrita de título — a versão anterior localizava o slide
   procurando o texto literal do título e quebrava em silêncio.
 - **Logo**: coloque `modelo_ppt/logo.png` (ou `.jpg`). A forma marcada com

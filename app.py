@@ -407,9 +407,18 @@ def documentos_arquivados(pid):
 @app.route("/api/modelos")
 @autenticado
 def modelos():
-    return jsonify(modelos=documentos.modelos_disponiveis(),
-                   slides=["capa", "missao", "cliente", "escopo", "postos",
-                           "equipamentos", "resumo", "condicoes", "final"])
+    """Os modelos da pasta e, para cada um, os slides que ele deixa desligar.
+
+    `slides` continua saindo porque a tela antiga o consumia; hoje ele é só a
+    lista do modelo padrão. Quem manda é `slides_por_modelo`, porque cada
+    arquivo tem os seus — trocar de modelo tem que trocar os interruptores.
+    """
+    disponiveis = documentos.modelos_disponiveis()
+    por_modelo = {m: documentos.slides_do_modelo(m) for m in disponiveis}
+    padrao = next((m for m in disponiveis if m in por_modelo), "")
+    return jsonify(modelos=disponiveis,
+                   slides_por_modelo=por_modelo,
+                   slides=por_modelo.get(padrao, []))
 
 
 # ════════════════════════════════════════════════════════════════════════════
