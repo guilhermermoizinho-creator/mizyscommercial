@@ -406,6 +406,70 @@ def triar(cand: dict, bloqueio=None) -> dict:
 
 # ── a rodada inteira ─────────────────────────────────────────────────────────
 
+RE_URL = re.compile(r"^(https?://)?([a-z0-9-]+\.)+[a-z]{2,}(/.*)?$", re.I)
+
+
+def rodar_lote(linhas, bloqueio=None, limite=60, log=None) -> dict:
+    """A mesma triagem, a partir de uma lista colada à mão.
+
+    Existe porque a varredura do Maps depende de uma API paga, e a triagem —
+    que é o trabalho chato — não depende de nada. Quem já tem a lista (achou no
+    Maps na mão, pegou num sindicato, exportou de uma feira) cola aqui e recebe
+    situação cadastral, porte, capital, CNAE e contato.
+
+    Cada linha pode ser um CNPJ, um site ou "Nome da empresa; site ou CNPJ".
+    """
+    def aviso(msg):
+        if log:
+            log(msg)
+
+    candidatos = []
+    for bruta in (linhas or [])[:limite]:
+        linha = str(bruta).strip()
+        if not linha:
+            continue
+        nome, dado = "", linha
+        if ";" in linha:
+            nome, _, dado = linha.partition(";")
+            nome, dado = nome.strip(), dado.strip()
+
+        cand = {"nome": nome or dado, "endereco": "", "site": "", "telefone": "",
+                "emails": [], "avaliacoes": 0, "situacao_maps": "OPERATIONAL",
+                "origem": "lote"}
+        so_digitos = _digitos(dado)
+        if len(so_digitos) == 14:
+            cand["cnpj_site"] = so_digitos
+        elif RE_URL.match(dado):
+            cand["site"] = dado if dado.lower().startswith("http") else "https://" + dado
+            achado = ler_site(cand["site"])
+            cand["emails"] = achado["emails"]
+            cand["cnpj_site"] = achado["cnpjs"][0] if achado["cnpjs"] else ""
+            if achado["erro"]:
+                cand["erro_site"] = achado["erro"]
+        else:
+            # Só o nome: dá para triar pela lista de bloqueio, e nada mais.
+            cand["cnpj_site"] = ""
+
+        if cand.get("cnpj_site"):
+            cand["rf"] = consultar_cnpj(cand["cnpj_site"])
+            if not cand["nome"] or cand["nome"] == dado:
+                cand["nome"] = cand["rf"].get("razao_social") or cand["nome"]
+            aviso("%-44s %s" % (cand["nome"][:44],
+                  cand["rf"].get("situacao") or cand["rf"].get("erro") or "?"))
+        candidatos.append(cand)
+
+    for c in candidatos:
+        triar(c, bloqueio)
+    candidatos.sort(key=lambda x: (-x["nota_triagem"], x["nome"]))
+    return {
+        "regiao": "lista colada",
+        "candidatos": candidatos,
+        "total": len(candidatos),
+        "aproveitados": sum(1 for c in candidatos if not c["descartado"]),
+        "erros": [],
+    }
+
+
 def rodar(regiao: str, termos=None, maximo_por_termo=20, enriquecer=True,
           bloqueio=None, limite_receita=40, log=None) -> dict:
     """Varre, enriquece e tria. `log` recebe mensagens de progresso."""

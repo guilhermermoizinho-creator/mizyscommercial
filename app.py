@@ -570,6 +570,25 @@ def prospeccao_buscar():
     return jsonify(job=jid, regiao=regiao, termos=len(termos)), 202
 
 
+@app.route("/api/prospeccao/lote", methods=["POST"])
+@autenticado
+@so_admin
+def prospeccao_lote():
+    """Triagem de uma lista colada. Não depende de API paga nenhuma."""
+    corpo = request.get_json(silent=True) or {}
+    linhas = [l for l in (corpo.get("linhas") or []) if str(l).strip()]
+    if not linhas:
+        return jsonify(erro="Cole ao menos uma linha."), 400
+    bloqueio = corpo.get("bloqueio") or []
+
+    def trabalho(_token):
+        return prospeccao.rodar_lote(linhas, bloqueio)
+
+    jid = fila.enfileirar("Triagem de %d empresa(s)" % len(linhas), trabalho,
+                          g.token, dono=g.usuario.get("id"))
+    return jsonify(job=jid, linhas=len(linhas)), 202
+
+
 @app.route("/api/prospeccao/cnpj/<cnpj>")
 @autenticado
 @so_admin

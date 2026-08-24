@@ -67,11 +67,20 @@ VIEWS.prospeccao = function(){
       Buscar empresas</button>
     </div></div>
 
-   <div class="card"><div class="card-h"><div style="flex:1"><h3>Consultar um CNPJ</h3>
-     <p>Situação cadastral, porte e contato — sem depender do Google</p></div></div>
+   <div class="card"><div class="card-h"><div style="flex:1"><h3>Triar uma lista</h3>
+     <p>Cole o que já tem — não depende do Google</p></div></div>
     <div class="card-b">
-     <div class="f"><label>CNPJ</label>
-      <input id="prospCnpj" placeholder="00.000.000/0001-00"></div>
+     <div class="f"><label>Uma empresa por linha</label>
+      <textarea id="prospLote" rows="7" placeholder="12.345.678/0001-90
+www.empresadelimpeza.com.br
+Conservadora Aurora; 98.765.432/0001-10
+Zeladoria Norte Ltda">${esc(state.prospLoteTexto || '')}</textarea>
+      ${nota('Cada linha pode ser um CNPJ, um site, ou "Nome; CNPJ ou site". Do site o sistema tira o CNPJ e os e-mails; do CNPJ, a situação cadastral e o porte. Só o nome dá para conferir contra a lista de bloqueio, e nada mais.')}</div>
+     <button class="btn btn-primary" style="width:100%;justify-content:center"
+      data-acao="prospTriarLote">Consultar e triar</button>
+
+     <div class="sublabel" style="margin-top:18px">Ou um CNPJ avulso</div>
+     <div class="f"><input id="prospCnpj" placeholder="00.000.000/0001-00"></div>
      <button class="btn" style="width:100%;justify-content:center"
       data-acao="prospConsultarCnpj">Consultar na Receita</button>
      ${st.cnpjResultado ? _fichaCnpj(st.cnpjResultado) : ''}
@@ -177,6 +186,25 @@ acao('prospBuscar', async () => {
   const est = await Jobs.acompanhar(r.job, `Prospecção em ${regiao}`);
   if(!est || !est.resultado) return;
   state.prosp = {...state.prosp, ...est.resultado};
+  state.prospMarcadas = {};
+  render();
+  toast(`${est.resultado.aproveitados} de ${est.resultado.total} aproveitadas.`);
+});
+
+acao('prospTriarLote', async () => {
+  const texto = ($('#prospLote').value || '').trim();
+  if(!texto) return toast('Cole ao menos uma linha.');
+  const linhas = texto.split('\n').map(s => s.trim()).filter(Boolean);
+  const bloqueio = (($('#prospBloqueio') || {}).value || '')
+    .split('\n').map(s => s.trim()).filter(Boolean);
+  state.prospLoteTexto = texto;
+
+  const r = await api('/api/prospeccao/lote', {
+    method:'POST', body: JSON.stringify({linhas, bloqueio}),
+  });
+  const est = await Jobs.acompanhar(r.job, `Triando ${linhas.length} empresa(s)`);
+  if(!est || !est.resultado) return;
+  state.prosp = {...(state.prosp || {}), ...est.resultado};
   state.prospMarcadas = {};
   render();
   toast(`${est.resultado.aproveitados} de ${est.resultado.total} aproveitadas.`);
