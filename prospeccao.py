@@ -268,8 +268,6 @@ def _telefone_plausivel(meio: str) -> bool:
     isto entrava "(17) 8654-7485" e "(71) 1536-3924", que são pedaços de outros
     números com um DDD válido por acaso na frente.
     """
-    if len(set(meio)) == 1:
-        return False          # 99999 e 0000 sao mascara de formulario, nao numero
     if len(meio) == 5:
         return meio[0] == "9"
     if len(meio) == 4:
@@ -349,8 +347,11 @@ def ler_site(url: str, paginas_extras=PAGINAS) -> dict:
         for ddd, meio, fim in RE_TEL.findall(limpo):
             if int(ddd) not in DDDS or not _telefone_plausivel(meio):
                 continue
-            if len(set(fim)) == 1 and fim[0] in "09":
-                continue      # ...-9999 e ...-0000 pelo mesmo motivo
+            # Mascara de formulario e o numero INTEIRO repetindo um digito:
+            # (99) 99999-9999, (00) 0000-0000. Prefixo repetido sozinho nao
+            # basta — (11) 99999-1234 e celular de verdade.
+            if len(set(meio + fim)) == 1:
+                continue
             t = "(%s) %s-%s" % (ddd, meio, fim)
             if t not in vistos_t:
                 vistos_t.append(t)

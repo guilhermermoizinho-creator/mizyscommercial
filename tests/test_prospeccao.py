@@ -139,6 +139,18 @@ class TestTelefone(unittest.TestCase):
                          ("6000", False), ("789", False)):
             self.assertEqual(P._telefone_plausivel(meio), ok, meio)
 
+    def test_mascara_de_formulario_nao_e_telefone(self):
+        """(99) 99999-9999 e (00) 0000-0000 são o placeholder do campo.
+
+        A regra olha o número INTEIRO: prefixo repetido sozinho não basta,
+        porque (11) 99999-1234 é um celular de verdade.
+        """
+        mascara = lambda meio, fim: len(set(meio + fim)) == 1
+        self.assertTrue(mascara("99999", "9999"))
+        self.assertTrue(mascara("0000", "0000"))
+        self.assertFalse(mascara("99999", "1234"))
+        self.assertFalse(mascara("3393", "1717"))
+
     def test_ddd_precisa_existir(self):
         for existe in (11, 17, 21, 47, 71, 85, 99):
             self.assertIn(existe, P.DDDS)
