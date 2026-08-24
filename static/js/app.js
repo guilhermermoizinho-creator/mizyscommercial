@@ -150,6 +150,14 @@ function contadores(){
   n('#nEquip', DB.list('equipamentos').length);
   n('#nMat', DB.list('materiais').length);
   n('#nContratos', DB.list('contratos').filter(c => c.status === 'Ativo').length);
+  /* Fila de acesso no trilho. Não é badge de volume como os outros: é uma
+     pendência que trava uma pessoa do lado de fora, e o aviso por e-mail já
+     falhou duas vezes aqui — uma por SMTP fora do .env, outra pela rede
+     bloquear a porta. O ponto no ícone não depende de nada. */
+  const pendentes = DB.list('perfis').filter(p => p.papel === 'pendente').length;
+  n('#nPendentes', pendentes || '');
+  const cfg = $('#rail .rail-item[data-g="sistema"]');
+  if(cfg) cfg.classList.toggle('tem', pendentes > 0 && Sessao.podeGerir());
   pontosDoTrilho();
 }
 

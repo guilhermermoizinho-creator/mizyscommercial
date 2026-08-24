@@ -683,7 +683,11 @@ acoes({
   editarProposta(d){ go('propostaEditor', {id:+d.id}); },
   verResumo(d){ go('propostaResumo', {id:+d.id}); },
   abrirContrato(d){ go('contratoDetalhe', {id:+d.id}); },
-  irPara(d){ go(d.v); },
+  /* `data-tab` é opcional e retrocompatível: sem ele o comportamento é o de
+     sempre. Com ele dá para mandar alguém direto na aba certa — a faixa de
+     pedidos de acesso precisa abrir Configurações JÁ em Usuários, senão o
+     atalho larga a pessoa numa tela de parâmetros. */
+  irPara(d){ go(d.v, d.tab ? {tab:d.tab} : {}); },
 
   async alternarAtiv(d){
     const a = DB.get('ativs', d.id);

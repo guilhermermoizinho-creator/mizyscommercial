@@ -152,6 +152,8 @@ VIEWS.inicio = function(){
         Escolha por onde começar.</p>
     </header>
 
+    ${_avisoAcesso()}
+
     <section class="modulos">
       <div class="mod-h">
         <span class="lb">Módulos</span>
@@ -171,6 +173,24 @@ VIEWS.inicio = function(){
     </section>
   </div>`;
 };
+
+/* Fila de acesso na cara de quem pode liberar.
+
+   O aviso por e-mail existe, mas depende de SMTP configurado E de a rede
+   deixar sair — duas coisas que já falharam aqui. Quem pediu acesso fica
+   trancado do lado de fora enquanto ninguém percebe, e o pedido de 24/08 ficou
+   quatro horas parado por isso. A tela não depende de nada. */
+function _avisoAcesso(){
+  if(!Sessao.podeGerir()) return '';
+  const fila = DB.list('perfis').filter(p => p.papel === 'pendente');
+  if(!fila.length) return '';
+  return `<div class="faixa" style="margin:0 auto 18px;max-width:1100px">
+    ${ico('cadeado')}<span class="sp">
+     <b>${fila.length} pedido(s) de acesso</b> aguardando liberação
+     — ${esc(fila.slice(0, 3).map(p => p.email || p.nome).join(', '))}${fila.length > 3 ? '…' : ''}</span>
+    <button class="btn btn-sm btn-primary" data-acao="irPara"
+     data-v="configuracoes" data-tab="usuarios">Ver</button></div>`;
+}
 
 /* ── O carrossel ─────────────────────────────────────────────────────────────
    Quantos cartões cabem não é decidido aqui: quem decide é a media query, que
