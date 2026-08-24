@@ -40,6 +40,7 @@ import correio
 import documentos
 import fila
 import ppt
+import prospeccao
 from supa import ErroSupabase, Supabase, service_key
 
 load_dotenv()
@@ -114,6 +115,28 @@ def _usuario_do_token(token):
             for k in [k for k, v in _CACHE.items() if v[0] <= agora]:
                 _CACHE.pop(k, None)
     return usuario
+
+
+def so_admin(fn):
+    """Só admin ou gestor. Vem SEMPRE depois de @autenticado, que é quem enche
+    o `g.usuario` — invertido, a checagem lê um `g` vazio e libera geral.
+
+    O papel é lido de `perfis`, a mesma tabela que a RLS consulta: a tela
+    esconder o botão não é proteção nenhuma, porque a rota continua aberta a
+    quem souber o endereço.
+    """
+    @functools.wraps(fn)
+    def envelope(*args, **kwargs):
+        try:
+            perfil = g.sb.select("perfis", "papel,ativo",
+                                 id="eq.%s" % g.usuario.get("id"), limite=1)
+        except ErroSupabase as exc:
+            return jsonify(erro=str(exc)), 502
+        linha = (perfil or [{}])[0]
+        if not linha.get("ativo") or linha.get("papel") not in ("admin", "gestor"):
+            return jsonify(erro="Esta tela é de administrador."), 403
+        return fn(*args, **kwargs)
+    return envelope
 
 
 def autenticado(fn):
@@ -504,6 +527,109 @@ def previa_email(pid):
         configurado=correio.configurado(),
         faltando=correio.config_faltando(),
     )
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# PROSPECÇÃO — varrer o Maps, checar na Receita, virar lead
+# ════════════════════════════════════════════════════════════════════════════
+
+@app.route("/api/prospeccao/estado")
+@autenticado
+@so_admin
+def prospeccao_estado():
+    """O que está pronto e o que falta, antes de a pessoa clicar em buscar."""
+    return jsonify(
+        google=bool(prospeccao.chave_google()),
+        termos=prospeccao.TERMOS,
+        bloqueio=prospeccao.GRANDES,
+        cnaes=prospeccao.CNAES_ALVO,
+    )
+
+
+@app.route("/api/prospeccao/buscar", methods=["POST"])
+@autenticado
+@so_admin
+def prospeccao_buscar():
+    """A rodada. Roda na fila porque leva minutos: a Receita é limitada a uma
+    consulta a cada 2,5 s, e trinta empresas passam de um minuto só nisso —
+    tempo de sobra para o navegador desistir da requisição."""
+    corpo = request.get_json(silent=True) or {}
+    regiao = (corpo.get("regiao") or "").strip()
+    if not regiao:
+        return jsonify(erro="Informe a cidade ou região."), 400
+    termos = [t for t in (corpo.get("termos") or prospeccao.TERMOS) if str(t).strip()]
+    maximo = max(1, min(int(corpo.get("maximo") or 20), 20))
+    enriquecer = corpo.get("enriquecer", True)
+    bloqueio = corpo.get("bloqueio") or []
+
+    def trabalho(_token):
+        return prospeccao.rodar(regiao, termos, maximo, enriquecer, bloqueio)
+
+    jid = fila.enfileirar("Prospecção em %s" % regiao, trabalho, g.token,
+                          dono=g.usuario.get("id"))
+    return jsonify(job=jid, regiao=regiao, termos=len(termos)), 202
+
+
+@app.route("/api/prospeccao/cnpj/<cnpj>")
+@autenticado
+@so_admin
+def prospeccao_cnpj(cnpj):
+    """Consulta avulsa — serve para a lista manual, sem depender do Google."""
+    return jsonify(prospeccao.consultar_cnpj(cnpj))
+
+
+@app.route("/api/prospeccao/importar", methods=["POST"])
+@autenticado
+@so_admin
+def prospeccao_importar():
+    """Vira lead. Deduplica por CNPJ e, sem CNPJ, por nome — importar a mesma
+    empresa duas vezes é o jeito mais rápido de dois vendedores ligarem para o
+    mesmo cliente na mesma semana."""
+    corpo = request.get_json(silent=True) or {}
+    escolhidos = corpo.get("candidatos") or []
+    if not escolhidos:
+        return jsonify(erro="Nenhuma empresa selecionada."), 400
+    try:
+        existentes = g.sb.select("leads", "id,empresa,cnpj")
+    except ErroSupabase as exc:
+        return jsonify(erro=str(exc)), 502
+    por_cnpj = {prospeccao._digitos(l.get("cnpj")): l for l in existentes if l.get("cnpj")}
+    por_nome = {prospeccao._sem_acento(l.get("empresa")): l for l in existentes}
+
+    criados, repetidos, falhas = [], [], []
+    for c in escolhidos:
+        rf = c.get("rf") or {}
+        cnpj = prospeccao._digitos(c.get("cnpj_site") or rf.get("cnpj") or "")
+        nome = rf.get("razao_social") or c.get("nome") or ""
+        if (cnpj and cnpj in por_cnpj) or prospeccao._sem_acento(nome) in por_nome:
+            repetidos.append(nome)
+            continue
+        emails = c.get("emails") or []
+        novo = {
+            "empresa": nome,
+            "cnpj": cnpj or None,
+            "endereco": c.get("endereco") or rf.get("municipio") or "",
+            "cidade": rf.get("municipio") or "",
+            "uf": rf.get("uf") or "",
+            "site": c.get("site") or "",
+            "contato_email": (emails[0] if emails else rf.get("email_rf") or ""),
+            "contato_telefone": c.get("telefone") or rf.get("telefone_rf") or "",
+            "origem": "Prospecção",
+            "obs": "; ".join(c.get("sinais") or []),
+            "owner_id": g.usuario.get("id"),
+        }
+        try:
+            # A linha gravada volta inteira porque a tela a empurra direto na
+            # memória: a lista de leads é paginada, e recarregar a tabela
+            # perderia as páginas que o usuário já trouxe.
+            linha = g.sb.insert("leads", novo)
+            criados.append(linha or novo)
+            if cnpj:
+                por_cnpj[cnpj] = novo
+            por_nome[prospeccao._sem_acento(nome)] = novo
+        except ErroSupabase as exc:
+            falhas.append("%s: %s" % (nome, str(exc)[:90]))
+    return jsonify(criados=criados, repetidos=repetidos, falhas=falhas)
 
 
 # ════════════════════════════════════════════════════════════════════════════

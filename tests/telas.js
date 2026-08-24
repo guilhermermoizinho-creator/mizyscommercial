@@ -173,7 +173,8 @@ const ctx = vm.createContext(sandbox);
    é a mesma do <script> no template — trocar aqui esconderia um erro real. */
 const ARQUIVOS = ['util.js', 'calculo.js', 'ui.js', 'db.js', 'forms.js',
                   'views-inicio.js', 'views-crm.js', 'views-proposta.js',
-                  'views-contratos.js', 'views-cadastros.js', 'graficos.js'];
+                  'views-contratos.js', 'views-cadastros.js', 'views-prospeccao.js',
+                  'graficos.js'];
 
 for(const f of ARQUIVOS){
   try{ vm.runInContext(js(f), ctx, {filename: f}); }
@@ -211,6 +212,24 @@ const TELAS = [
   ['propostaEditor', {id:1, gaveta:'historico'}],
   ['contratos', {}], ['ccts', {}], ['equipamentos', {}], ['materiais', {}],
   ['configuracoes', {}], ['configuracoes', {tab:'usuarios'}], ['dashboard', {}],
+  /* Prospecção em tres estados: antes de perguntar ao servidor, com a busca
+     desligada por falta de chave, e com resultado na mao — inclusive uma
+     descartada, que e o caminho onde os motivos sao pintados. */
+  ['prospeccao', {}],
+  ['prospeccao', {prosp:{google:false, bloqueio:['hagana','gps']}}],
+  ['prospeccao', {prosp:{google:true, regiao:'São Paulo', total:2, aproveitados:1,
+    candidatos:[
+      {place_id:'a', nome:'Limpadora Bandeirantes', endereco:'Rua X, 10 - São Paulo',
+       site:'https://exemplo.com.br', telefone:'(11) 4002-8922',
+       emails:['comercial@exemplo.com.br'], cnpj_site:'57559387000138',
+       sinais:['porte demais','12 anos'], motivos:[], nota_triagem:95, descartado:false,
+       rf:{cnpj:'57559387000138', razao_social:'LIMPADORA BANDEIRANTES LTDA',
+           situacao:'ATIVA', porte:'DEMAIS', capital_social:800000,
+           cnae_desc:'Limpeza em prédios e em domicílios', municipio:'SÃO PAULO', uf:'SP'}},
+      {place_id:'b', nome:'Hagana Serviços', endereco:'Av. Y, 200',
+       site:'', telefone:'', emails:[], sinais:['capital R$ 279.2 mi'],
+       motivos:['grande/bloqueada: hagana'], nota_triagem:0, descartado:true, rf:{}},
+    ], erros:[]}, prospDescartadas:true}],
 ];
 
 let falhas = 0;

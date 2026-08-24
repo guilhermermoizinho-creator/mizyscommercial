@@ -12,6 +12,7 @@ const TITLES = {
   contratoDetalhe:'Contrato', ccts:'Convenções, escalas e turnos',
   cctDetalhe:'Convenção coletiva',
   equipamentos:'Equipamentos', configuracoes:'Configurações',
+  prospeccao:'Prospecção de clientes',
 };
 
 /* A tela que abre o sistema. Era o dashboard; virou o mapa de atalhos, pelo
@@ -43,8 +44,11 @@ const VIEW_INICIAL = 'inicio';
      por que as três moram juntas. */
 const GRUPOS = {
   inicio:    {rotulo:'Início',           views:['inicio']},
+  /* Prospecção mora no Comercial, e não no Sistema, porque o que ela produz
+     é lead — a tela seguinte de quem acabou de rodar uma busca é a de Leads.
+     O acesso é de admin/gestor, e quem barra é a rota, não o menu. */
   comercial: {rotulo:'Comercial',        views:['pipeline','leads','leadDetalhe','contatos',
-                                                'oportunidades','atividades']},
+                                                'oportunidades','atividades','prospeccao']},
   propostas: {rotulo:'Propostas',        views:['propostas','propostaEditor','propostaResumo']},
   contratos: {rotulo:'Contratos',        views:['contratos','contratoDetalhe']},
   bases:     {rotulo:'Bases de cálculo', views:['ccts','cctDetalhe','equipamentos']},
@@ -114,6 +118,15 @@ function depoisDoRender(){
   if(view === 'contratoDetalhe' && state.tab === 'historico'
      && !Historico.cache[Historico.chave('Contrato', state.id)])
     carregarHistorico('Contrato', state.id);
+  /* A tela de prospecção precisa saber, ANTES do primeiro clique, se a chave
+     do Google está no servidor — senão o botão promete uma busca que vai
+     falhar. `google:null` é "ainda não perguntei", e por isso o aviso só
+     aparece quando a resposta chega dizendo false. */
+  if(view === 'prospeccao' && !state.prosp)
+    api('/api/prospeccao/estado').then(r => {
+      state.prosp = {google:r.google, bloqueio:r.bloqueio, termos:r.termos};
+      render();
+    }).catch(() => {});
   if(view === 'propostaEditor' && state.gaveta === 'documento' && !state.modelos)
     api('/api/modelos').then(r => {
       state.modelos = r.modelos;

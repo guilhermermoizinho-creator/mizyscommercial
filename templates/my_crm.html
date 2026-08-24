@@ -111,6 +111,9 @@
         <button data-v="leads">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11h-6"/></svg>
           Leads <span class="badge" id="nLeads">0</span></button>
+        <button data-v="prospeccao">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          Prospecção</button>
         <button data-v="contatos">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
           Contatos <span class="badge" id="nContatos">0</span></button>
@@ -255,6 +258,7 @@
 <script src="{{ url_for('static', filename='js/views-proposta.js') }}?v={{ versao_estatica() }}"></script>
 <script src="{{ url_for('static', filename='js/views-contratos.js') }}?v={{ versao_estatica() }}"></script>
 <script src="{{ url_for('static', filename='js/views-cadastros.js') }}?v={{ versao_estatica() }}"></script>
+<script src="{{ url_for('static', filename='js/views-prospeccao.js') }}?v={{ versao_estatica() }}"></script>
 <script src="{{ url_for('static', filename='js/forms.js') }}?v={{ versao_estatica() }}"></script>
 <script src="{{ url_for('static', filename='js/app.js') }}?v={{ versao_estatica() }}"></script>
 </body>
