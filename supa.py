@@ -38,12 +38,27 @@ _CTX_TLS = False
 
 
 def _ca_bundle() -> str:
+    """O pacote de CAs a usar, procurado DE DENTRO DA PASTA para fora.
+
+    A ordem importa: a pasta do projeto tem que bastar. Se o unico caminho
+    fosse `~/.certs`, copiar a pasta para outra maquina levaria o codigo e
+    deixaria o certificado para tras — e o sistema subiria, so pararia de falar
+    com o Supabase, com um erro de TLS que nao diz isso.
+
+    1. as variaveis de ambiente, para quem quiser mandar em tudo;
+    2. `certs/ca-bundle.pem` DENTRO do projeto — o caminho normal;
+    3. `~/.certs/ca-bundle.pem`, so por compatibilidade com a instalacao antiga.
+    """
     for var in ("SUPABASE_CA_BUNDLE", "REQUESTS_CA_BUNDLE", "SSL_CERT_FILE"):
         caminho = (os.environ.get(var) or "").strip().strip('"')
         if caminho and os.path.isfile(caminho):
             return caminho
-    padrao = os.path.join(os.path.expanduser("~"), ".certs", "ca-bundle.pem")
-    return padrao if os.path.isfile(padrao) else ""
+    aqui = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "certs", "ca-bundle.pem")
+    if os.path.isfile(aqui):
+        return aqui
+    antigo = os.path.join(os.path.expanduser("~"), ".certs", "ca-bundle.pem")
+    return antigo if os.path.isfile(antigo) else ""
 
 
 def _contexto():

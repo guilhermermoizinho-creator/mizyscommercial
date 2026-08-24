@@ -2,8 +2,10 @@
 __pycache__/
 *.pyc
 
-# O cloudflared tem 54 MB e se baixa de novo em 10 segundos: não versiona.
-tunel/cloudflared.exe
 .venv/
 .pytest_cache/
 .vscode/
+
+# Pacote de CAs opcional, para rede com proxy que inspeciona o HTTPS. Cada rede
+# tem o seu, entao nao vai para o git.
+certs/

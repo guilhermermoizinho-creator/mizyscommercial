@@ -39,6 +39,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+import supa
+
 # ── rede ─────────────────────────────────────────────────────────────────────
 # Mesma história do supa.py: proxy que reassina o HTTPS derruba toda
 # chamada de fora. Aqui dói mais, porque são muitos hosts diferentes.
@@ -46,17 +48,11 @@ _CTX = False
 
 
 def _contexto():
+    """O mesmo contexto TLS do supa.py, e de proposito: duas buscas do mesmo
+    certificado divergem no dia em que alguem mexe numa e esquece a outra."""
     global _CTX
     if _CTX is False:
-        bundle = ""
-        for var in ("SUPABASE_CA_BUNDLE", "REQUESTS_CA_BUNDLE", "SSL_CERT_FILE"):
-            caminho = (os.environ.get(var) or "").strip().strip('"')
-            if caminho and os.path.isfile(caminho):
-                bundle = caminho
-                break
-        if not bundle:
-            padrao = os.path.join(os.path.expanduser("~"), ".certs", "ca-bundle.pem")
-            bundle = padrao if os.path.isfile(padrao) else ""
+        bundle = supa._ca_bundle()
         if not bundle:
             _CTX = None
         else:
