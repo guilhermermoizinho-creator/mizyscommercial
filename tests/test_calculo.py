@@ -283,6 +283,61 @@ class TestRobustez(unittest.TestCase):
         self.assertEqual(calculo.confere(c), [])
 
 
+class TestTiqueteRefeicaoPorPlantao(unittest.TestCase):
+    """O tíquete é por dia trabalhado — e o posto não pode pagar mais do que
+    tem plantões.
+
+    CCT SIEMACO-SP, cláusula décima quinta: o benefício é devido "por dia
+    efetivamente trabalhado" e NÃO é devido em falta, afastamento médico ou
+    férias. Quem sai de férias não recebe; quem cobre, recebe. O total do posto
+    é um tíquete por plantão coberto, qualquer que seja o tamanho da equipe.
+
+    O erro que este teste tranca: o custo é por funcionário e depois
+    multiplicado pelo fator, que embute férias e absenteísmo. Usando os
+    plantões do titular, um posto 12x36 pagava 34,51 tíquetes para cobrir 30,41
+    plantões — 13,5% a mais, todo mês, num benefício que a convenção diz não
+    ser devido justamente nesses dias.
+    """
+
+    def _item(self, escala_id):
+        p = proposta_base(itens=[{"cargoId": 2, "escalaId": escala_id, "turnoId": 1,
+                                  "qtd": 1, "adicionais": [], "beneficios": [2]}])
+        c = calculo.calc_proposta(p, ctx_base())
+        return c["itens"][0]
+
+    def test_12x36_paga_um_tiquete_por_plantao_do_posto(self):
+        it = self._item(2)
+        vr = it["beneficios"][0]
+        dias_posto = 7 * 4.345                      # posto aberto todo dia
+        self.assertAlmostEqual(vr["dias"] * it["fator_aplicado"], dias_posto, places=2)
+
+    def test_escala_de_fator_manual_nao_muda(self):
+        """44h tem fator 1: o titular é o posto, e a conta é a de sempre."""
+        it = self._item(1)
+        vr = it["beneficios"][0]
+        self.assertEqual(it["fator_aplicado"], 1.0)
+        self.assertAlmostEqual(vr["dias"], 5 * 4.345, places=2)
+
+    def test_o_fator_de_cobertura_nao_multiplica_o_tiquete(self):
+        """Fator maior é mais gente para o mesmo posto, não mais refeições."""
+        doze = self._item(2)
+        vr = doze["beneficios"][0]
+        self.assertGreater(doze["fator_aplicado"], 2.0)
+        # Se o fator multiplicasse, seriam mais de 32 tíquetes.
+        self.assertLess(vr["dias"] * doze["fator_aplicado"], 31)
+
+    def test_beneficio_mensal_continua_por_cabeca(self):
+        """Cesta e assistência são por empregado, inclusive em férias — a CCT
+        manda entregar a cesta durante o gozo de férias. Só o que é POR DIA
+        muda."""
+        p = proposta_base(itens=[{"cargoId": 2, "escalaId": 2, "turnoId": 1,
+                                  "qtd": 1, "adicionais": [], "beneficios": [3]}])
+        c = calculo.calc_proposta(p, ctx_base())
+        cesta = c["itens"][0]["beneficios"][0]
+        self.assertEqual(cesta["valor_c"], calculo.cents(240))
+        self.assertEqual(cesta["dias"], 0)
+
+
 class TestEncargosContraACCT(unittest.TestCase):
     """Amarra o motor à TABELA DE ENCARGOS SOCIAIS MÍNIMO da CCT do SIEMACO-SP
     (cláusula septagésima segunda, CCT 2026/2027, MTE SP003552/2026).

@@ -423,8 +423,24 @@ function calcItem(item, proposta, ctx){
      h/mês e a chefia 220, dentro da mesma convenção. */
   const horasMes = nreal(cargo.horas_mensais, 0) || nreal(cct.horas_mensais, 220) || 220;
   const fBase = nreal(det.fator_base, 0) || nreal(escala && escala.fator_func, 1) || 1;
-  const plantoes = (nreal(escala && escala.dias_semana, 5) * 4.345) / Math.max(fBase, 1);
+  const diasPostoMes = nreal(escala && escala.dias_semana, 5) * 4.345;
+  const plantoes = diasPostoMes / Math.max(fBase, 1);
   const intervaloC = item.intervalo ? arred((salarioC / horasMes) * 1.5 * plantoes) : 0;
+
+  /* ⚠ Dias de VR/VT: divide pelo fator APLICADO, não pelo base. Espelho de
+     calculo.py — mexeu aqui, mexa lá.
+
+     A CCT do SIEMACO-SP (cláusula décima quinta) dá o tíquete "por dia
+     efetivamente trabalhado" e o nega em falta, afastamento e férias. Quem
+     está de férias não recebe; quem cobre, sim. O posto paga UM tíquete por
+     plantão coberto.
+
+     Como o custo é por funcionário e depois multiplicado pelo fator aplicado
+     — que embute férias e absenteísmo — usar os plantões do titular fazia um
+     posto 12x36 pagar 15,93 × 2,166 = 34,51 tíquetes para cobrir 30,41
+     plantões: 13,5% a mais, todo mês. Em escala de fator manual os dois
+     fatores são iguais e nada muda. */
+  const diasBeneficio = diasPostoMes / Math.max(fatorAplicado, 0.01);
 
   const M1 = salarioC + valorAdicC + noturno.valorC + intervaloC;
 
@@ -439,7 +455,7 @@ function calcItem(item, proposta, ctx){
   const benefs = (item.beneficios || [])
     .map(bid => ctx.beneficios[String(bid)])
     .filter(Boolean)
-    .map(b => calcBeneficio(b, salarioC, cfg, plantoes));
+    .map(b => calcBeneficio(b, salarioC, cfg, diasBeneficio));
   const s23 = benefs.reduce((s, b) => s + b.custoC, 0);
   const M2 = s21 + s22 + s23;
 

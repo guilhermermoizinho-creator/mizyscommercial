@@ -498,8 +498,28 @@ def calc_item(item, proposta, ctx) -> dict | None:
                  or _num(cct.get("horas_mensais"), 220.0) or 220.0)
     f_base = _num(fator_det.get("fator_base"), 0.0) or _num(
         (escala or {}).get("fator_func"), 1.0) or 1.0
-    plantoes = (_num((escala or {}).get("dias_semana"), 5.0) * 4.345) / max(f_base, 1.0)
+    dias_posto_mes = _num((escala or {}).get("dias_semana"), 5.0) * 4.345
+    plantoes = dias_posto_mes / max(f_base, 1.0)
     intervalo_c = arred((salario_c / horas_mes) * 1.5 * plantoes) if item.get("intervalo") else 0
+
+    # ⚠ Dias de VR/VT: divide pelo fator APLICADO, não pelo fator base.
+    #
+    # A CCT do SIEMACO-SP é expressa (cláusula décima quinta): o tíquete é
+    # devido "por dia efetivamente trabalhado", e "não é devido na ausência de
+    # labor decorrente de faltas justificadas e ou injustificadas, afastamentos
+    # médicos [...] e férias". Quem está de férias não recebe; quem cobre, sim.
+    # O total do posto é, portanto, UM tíquete por plantão coberto.
+    #
+    # Só que o custo aqui é por funcionário e depois multiplicado pelo fator
+    # aplicado, que embute a cobertura de férias e o absenteísmo. Usando os
+    # plantões do titular, um posto 12x36 pagava 15,93 × 2,166 = 34,51 tíquetes
+    # para cobrir 30,41 plantões — 13,5% a mais, todo mês, em cima de um
+    # benefício que a convenção diz não ser devido nesses dias.
+    #
+    # Dividindo pelo fator aplicado, a multiplicação devolve exatamente os
+    # plantões do posto. Em escala de fator manual (5x2, 6x1, 44h) os dois
+    # fatores são o mesmo número e nada muda — só as calculadas mexem.
+    dias_beneficio = dias_posto_mes / max(fator_aplicado, 0.01)
 
     m1 = salario_c + valor_adic_c + noturno["valor_c"] + intervalo_c
 
@@ -516,7 +536,7 @@ def calc_item(item, proposta, ctx) -> dict | None:
     for bid in (item.get("beneficios") or []):
         b = ctx["beneficios"].get(str(bid))
         if b:
-            benefs.append(calc_beneficio(b, salario_c, cfg, plantoes))
+            benefs.append(calc_beneficio(b, salario_c, cfg, dias_beneficio))
     s23 = sum(b["custo_c"] for b in benefs)
     benef_bruto_c = sum(b["valor_c"] for b in benefs)
     benef_desc_c = sum(b["desconto_c"] for b in benefs)
