@@ -461,7 +461,7 @@ def enviar_proposta(pid):
 
     try:
         p, ctx, c = documentos.carregar(g.sb, pid)
-        p = documentos.garantir_token_aceite(g.sb, p)
+        p = documentos.garantir_token_aceite(g.sb, p, ctx.get("config"))
         dados = documentos.dados_documento(g.sb, p, ctx, c)
     except documentos.ErroProposta as exc:
         return jsonify(erro=str(exc)), 400
@@ -684,6 +684,17 @@ def pagina_aceite(token):
     if not sb:
         return _pagina("Link indisponível",
                        "<p>O link público não está habilitado neste servidor.</p>"), 503
+    # Desligado em Configurações, a rota fecha junto. Esconder o link na tela e
+    # deixar a porta aberta não desliga nada: o token está no banco e a URL é
+    # adivinhável por quem já recebeu uma proposta antes.
+    try:
+        cfg = {c["chave"]: c["valor"] for c in sb.select("configuracoes", "chave,valor")}
+    except ErroSupabase:
+        cfg = {}
+    if not documentos.aceite_ligado(cfg):
+        return _pagina("Link indisponível",
+                       "<p>O aceite pelo link está desligado neste sistema. "
+                       "Fale com quem enviou a proposta.</p>"), 503
     try:
         p = _proposta_por_token(sb, token)
     except ErroSupabase:

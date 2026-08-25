@@ -1425,6 +1425,15 @@ const condicional = b => !!b && (b.condicional === true ||
   String(CFG('beneficios_condicionais', '')).split(',')
     .map(s => s.trim()).filter(Boolean).includes(String(b.id)));
 
+/* Espelho de documentos.aceite_ligado(): a tela e o servidor precisam
+   concordar sobre o link estar valendo, senão a tela oferece um botão que a
+   rota recusa. Vazio conta como DESLIGADO — quem nunca configurou não deveria
+   estar mandando link público. */
+const aceiteLigado = () => {
+  const v = String(CFG('aceite_ativo', '')).trim().toLowerCase();
+  return !['', '0', 'nao', 'não', 'false', 'off'].includes(v);
+};
+
 /* ── aba de documento e envio (4.5) ── */
 function abaDocumento(p, c, lead){
   const modelos = state.modelos || [];
@@ -1470,7 +1479,14 @@ function abaDocumento(p, c, lead){
         ${esc(r)}</label>`; }).join('')}</div>
      ${nota('Capa e resumo podem ser desligados, mas raramente é boa ideia: sem resumo o cliente não encontra o valor.')}
      <div class="sublabel" style="margin-top:18px">Link de aceite</div>
-     ${p.aceite_token ? `<div class="readbox">
+     ${!aceiteLigado() ? `<div class="faixa">${ico('cadeado')}<span class="sp">
+        <b>O aceite pelo link está desligado.</b> Enquanto o CRM roda em
+        <code>localhost</code>, o link que o cliente receberia só abriria nesta
+        máquina — e link quebrado numa proposta é pior do que proposta sem link.
+        Ligue em Configurações (<code>aceite_ativo</code>) quando o sistema
+        tiver endereço público, e aponte o <code>aceite_base_url</code> para
+        ele.</span></div>`
+     : p.aceite_token ? `<div class="readbox">
         <b>Link público</b>
         <span style="word-break:break-all">${esc(CFG('aceite_base_url',''))}/p/${esc(p.aceite_token)}</span>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">

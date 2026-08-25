@@ -465,7 +465,21 @@ def _nome_arquivo(proposta, lead):
     return re.sub(r"[^A-Za-z0-9_-]+", "_", base).strip("_") or "proposta"
 
 
+def aceite_ligado(cfg) -> bool:
+    """O link público de aceite está valendo?
+
+    Desligado enquanto o CRM roda em `localhost`: o link que o cliente receberia
+    só abre na máquina de quem enviou, e um link quebrado numa proposta é pior
+    do que proposta sem link. Liga em Configurações quando o sistema tiver
+    endereço público — e aí o `aceite_base_url` também precisa apontar para ele.
+    """
+    v = str((cfg or {}).get("aceite_ativo", "")).strip().lower()
+    return v not in ("", "0", "nao", "não", "false", "off")
+
+
 def link_aceite(proposta, cfg) -> str:
+    if not aceite_ligado(cfg):
+        return ""
     token = proposta.get("aceite_token")
     if not token:
         return ""
@@ -473,7 +487,11 @@ def link_aceite(proposta, cfg) -> str:
     return "%s/p/%s" % (base, token)
 
 
-def garantir_token_aceite(sb: Supabase, proposta: dict) -> dict:
+def garantir_token_aceite(sb: Supabase, proposta: dict, cfg=None) -> dict:
+    """Sem o aceite ligado não se cria token: token guardado no banco é uma
+    porta pública esperando alguém achar o endereço."""
+    if cfg is not None and not aceite_ligado(cfg):
+        return proposta
     if proposta.get("aceite_token"):
         return proposta
     token = secrets.token_urlsafe(24)

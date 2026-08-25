@@ -324,6 +324,46 @@ class TestPPTX(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
 
+class TestAceitePorLink(unittest.TestCase):
+    """O interruptor do link público.
+
+    Desligado enquanto o CRM roda em localhost: o link que o cliente receberia
+    só abriria na máquina de quem enviou, e link quebrado numa proposta é pior
+    do que proposta sem link. O que este teste tranca é o desligamento ser de
+    verdade — esconder o botão e continuar gerando token deixaria uma porta
+    pública no banco esperando alguém achar o endereço.
+    """
+
+    def _cfg(self, valor):
+        return {"aceite_base_url": "http://x", "aceite_ativo": valor}
+
+    def test_vazio_conta_como_desligado(self):
+        """Quem nunca configurou não deveria estar mandando link público."""
+        self.assertFalse(documentos.aceite_ligado({}))
+        self.assertFalse(documentos.aceite_ligado(self._cfg("")))
+
+    def test_desligado_em_varias_grafias(self):
+        for v in ("0", "nao", "não", "false", "off", "OFF", " 0 "):
+            self.assertFalse(documentos.aceite_ligado(self._cfg(v)), v)
+
+    def test_ligado(self):
+        for v in ("1", "sim", "true", "on"):
+            self.assertTrue(documentos.aceite_ligado(self._cfg(v)), v)
+
+    def test_desligado_nao_monta_link_nem_com_token(self):
+        p = {"aceite_token": "abc123"}
+        self.assertEqual(documentos.link_aceite(p, self._cfg("0")), "")
+        self.assertEqual(documentos.link_aceite(p, self._cfg("1")), "http://x/p/abc123")
+
+    def test_desligado_nao_cria_token(self):
+        """Token gravado é porta aberta, mesmo sem ninguém mostrar o endereço."""
+        sb = base()
+        p = {"id": 1, "aceite_token": None}
+        self.assertIsNone(
+            documentos.garantir_token_aceite(sb, p, self._cfg("0")).get("aceite_token"))
+        self.assertEqual(sb.gravou, [])
+
+
 class TestModeloFacilities(unittest.TestCase):
     """O modelo novo, gerado por modelo_ppt/preparar_modelo.py.
 
