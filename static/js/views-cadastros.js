@@ -140,7 +140,7 @@ VIEWS.cctDetalhe = function(){
   const aba = (k,l,n) => `<button class="${t === k ? 'active' : ''}" data-acao="trocarAba"
     data-tab="${k}">${l} <span class="tag t-gray">${n}</span></button>`;
 
-  return `<button class="btn btn-sm" data-acao="irPara" data-v="ccts" style="margin-bottom:14px">← Voltar para convenções</button>
+  return `<button class="btn btn-sm" data-acao="irPara" data-v="ccts" style="margin-bottom:14px">${ico('voltar')}Voltar para convenções</button>
   ${propostas.length > congeladas ? `<div class="faixa aviso">${ico('aviso')}
     <span class="sp"><b>${propostas.length - congeladas}</b> proposta(s) usam esta convenção
      <b>sem congelamento</b>: mexer nos salários aqui muda o valor delas.</span></div>` : ''}

@@ -105,7 +105,7 @@ VIEWS.contratoDetalhe = function(){
   const aba = (k,r,n) => `<button class="${t === k ? 'active' : ''}" data-acao="trocarAba"
     data-tab="${k}">${r}${n !== undefined ? ` <span class="tag t-gray">${n}</span>` : ''}</button>`;
 
-  return `<button class="btn btn-sm" data-acao="irPara" data-v="contratos" style="margin-bottom:14px">← Voltar para contratos</button>
+  return `<button class="btn btn-sm" data-acao="irPara" data-v="contratos" style="margin-bottom:14px">${ico('voltar')}Voltar para contratos</button>
   ${reajusteVencido(c) ? `<div class="faixa aviso">${ico('aviso')}
     <span class="sp">A data-base de <b>${esc(MESES_NOME[c.reajuste_mes-1])}</b> passou e nenhum
      reajuste foi registrado neste ciclo.</span>

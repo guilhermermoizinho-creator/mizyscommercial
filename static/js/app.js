@@ -12,7 +12,7 @@ const TITLES = {
   contratoDetalhe:'Contrato', ccts:'Convenções, escalas e turnos',
   cctDetalhe:'Convenção coletiva',
   equipamentos:'Equipamentos', configuracoes:'Configurações',
-  prospeccao:'Prospecção de clientes',
+  prospeccao:'Prospecção de clientes', admin:'Administração',
 };
 
 /* A tela que abre o sistema. Era o dashboard; virou o mapa de atalhos, pelo
@@ -53,7 +53,7 @@ const GRUPOS = {
   contratos: {rotulo:'Contratos',        views:['contratos','contratoDetalhe']},
   bases:     {rotulo:'Bases de cálculo', views:['ccts','cctDetalhe','equipamentos']},
   analise:   {rotulo:'Dashboard',        views:['dashboard']},
-  sistema:   {rotulo:'Sistema',          views:['configuracoes']},
+  sistema:   {rotulo:'Sistema',          views:['configuracoes','admin']},
 };
 const grupoDa = v => Object.keys(GRUPOS).find(g => GRUPOS[g].views.includes(v));
 

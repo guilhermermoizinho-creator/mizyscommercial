@@ -109,6 +109,7 @@
   --r-sm:6px;          /* botão, input, chip, tag */
   --rail:62px;         /* largura do trilho de navegação */
 }
+
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'IBM Plex Sans',-apple-system,'Segoe UI',Roboto,sans-serif;
   /* O fundo não é preto chapado: são duas brumas de violeta muito diluídas —
@@ -266,13 +267,13 @@ input[type=number],.tabnum{font-variant-numeric:tabular-nums;
    que se apoia e so um filete de 1px o denunciava. Lido de relance, parecia
    texto. O rebaixo levanta o botao sem precisar de cor de acao. */
 .btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:var(--r-sm);
-  border:1px solid var(--border-ui);background:#252338;color:var(--text);font-weight:600;
+  border:1px solid var(--border-ui);background:var(--btn-bg);color:var(--text);font-weight:600;
   font-size:13.5px;cursor:pointer;transition:.15s;white-space:nowrap;box-shadow:var(--shadow)}
 .btn svg{width:15px;height:15px;stroke-width:2;fill:none}
 /* O hover pintava o texto de --accent-700, um violeta ESCURO — sobra do tempo
    em que o botao era branco. Sobre o botao escuro dava 2,15:1: passar o mouse
    APAGAVA o rotulo. Agora clareia, que e o que hover faz no escuro. */
-.btn:hover{background:#2E2B45;border-color:var(--blue);color:var(--blue-600)}
+.btn:hover{background:var(--btn-bg-hover);border-color:var(--blue);color:var(--blue-600)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 /* A primária é o Lapis inteiro, com um filete branco no topo (a luz batendo na
    quina). É o único botão colorido da tela — por isso não precisa de mais nada

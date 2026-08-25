@@ -447,7 +447,7 @@ async salvarDesfecho(d){
   await Historico.registrar('Oportunidade', d.id, {tipo: fase === 'Ganho' ? 'ganho' : 'perda',
     titulo:`${fase}: ${motivo}`, detalhe:obs, leadId:o.leadId});
   closeModal();
-  toast(fase === 'Ganho' ? 'Negócio ganho! 🎉' : 'Registrado como perdido');
+  toast(fase === 'Ganho' ? 'Negócio ganho!' : 'Registrado como perdido');
   /* Ganhou: a proposta que originou o negócio passa a Aprovada e congela junto
      — senão o funil diz "ganho" e a lista de propostas diz "rascunho". Depois
      vem a próxima pergunta, o contrato, que é onde o fluxo morria. */

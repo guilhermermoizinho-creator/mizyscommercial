@@ -239,7 +239,7 @@ VIEWS.dashboard = function(){
     <table><thead><tr><th>Proposta</th><th>Lead</th><th>Mensal</th><th>Status</th></tr></thead><tbody>
     ${DB.list('propostas').slice(0,5).map(p => { const c = calcProposta(p);
       return `<tr style="cursor:pointer" data-acao="abrirProposta" data-id="${p.id}">
-      <td><div class="cell-main">${esc(p.numero)}${p.snapshot ? ' 🔒' : ''}</div>
+      <td><div class="cell-main">${esc(p.numero)}${p.snapshot ? ico('cadeado', 'style="width:12px;height:12px;display:inline;vertical-align:-1px;margin-left:5px;opacity:.75"') : ''}</div>
         <div class="cell-sub">${esc(p.titulo)}</div></td>
       <td class="cell-sub">${esc(leadNome(p.leadId))}</td>
       <td style="font-weight:700">${money0C(c.mensalC)}</td>
@@ -451,7 +451,7 @@ function tabelaPropostasDoLead(prs, compacta, limite){
     const c = calcProposta(p);
     const baixa = c.margem < minima;
     return `<tr>
-    <td><div class="cell-main">${esc(p.numero)}${p.snapshot ? ' 🔒' : ''}</div>
+    <td><div class="cell-main">${esc(p.numero)}${p.snapshot ? ico('cadeado', 'style="width:12px;height:12px;display:inline;vertical-align:-1px;margin-left:5px;opacity:.75"') : ''}</div>
      ${p.aceite_em ? '<div class="cell-sub">aceita pelo cliente</div>' : ''}</td>
     ${compacta ? '' : `<td class="cell-sub">${esc(p.titulo || '—')}</td>`}
     <td class="cell-sub">${dt(p.emissao)}</td>
@@ -525,7 +525,7 @@ VIEWS.leadDetalhe = function(){
   const aba = (k, r, n) => `<button class="${t === k ? 'active' : ''}" data-acao="trocarAba"
     data-tab="${k}">${r}${n !== undefined ? ` <span class="tag t-gray">${n}</span>` : ''}</button>`;
 
-  return `<button class="btn btn-sm" data-acao="irPara" data-v="leads" style="margin-bottom:16px">← Voltar</button>
+  return `<button class="btn btn-sm" data-acao="irPara" data-v="leads" style="margin-bottom:16px">${ico('voltar')}Voltar</button>
   ${dups.length ? `<div class="faixa aviso">${ico('aviso')}
     <span class="sp">Possível duplicidade: <b>${dups.map(d => esc(d.empresa)).join(', ')}</b>
       ${dups.some(d => soDigitos(d.cnpj) && soDigitos(d.cnpj) === soDigitos(l.cnpj))

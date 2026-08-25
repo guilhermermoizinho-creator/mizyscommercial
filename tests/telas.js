@@ -174,6 +174,7 @@ const ctx = vm.createContext(sandbox);
 const ARQUIVOS = ['util.js', 'calculo.js', 'ui.js', 'db.js', 'forms.js',
                   'views-inicio.js', 'views-crm.js', 'views-proposta.js',
                   'views-contratos.js', 'views-cadastros.js', 'views-prospeccao.js',
+                  'views-admin.js',
                   'graficos.js'];
 
 for(const f of ARQUIVOS){
@@ -215,6 +216,10 @@ const TELAS = [
   /* Prospecção em tres estados: antes de perguntar ao servidor, com a busca
      desligada por falta de chave, e com resultado na mao — inclusive uma
      descartada, que e o caminho onde os motivos sao pintados. */
+  ['admin', {}], ['admin', {tab:'sistema'}],
+  ['admin', {tab:'sistema', saude:{supabase:true, link_publico:false, pdf:true,
+    pdf_motor:'LibreOffice', email:false, email_faltando:'SMTP_HOST', logo:true,
+    modelos:['proposta_facilities.pptx']}}],
   ['prospeccao', {}],
   ['prospeccao', {prosp:{google:false, bloqueio:['hagana','gps']}}],
   ['prospeccao', {prosp:{google:true, regiao:'São Paulo', total:2, aproveitados:1,
