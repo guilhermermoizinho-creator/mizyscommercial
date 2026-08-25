@@ -399,12 +399,22 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape') closeModal();
 /* ════════════════════════════════════════════════════════════════════════════
    O TRILHO
    O painel abre sozinho no hover e no foco de teclado — isso é CSS, e é o
-   caminho normal no desktop. O JS existe por causa do que o CSS não alcança:
-   · tela de toque não tem hover. Sem o clique que FIXA o painel, o menu seria
-     inutilizável no tablet do vendedor em visita;
-   · painel fixo tem que fechar ao clicar fora e no Esc, senão fica preso na
-     tela por cima do conteúdo.
+   caminho normal no desktop. O JS existe por um motivo só: tela de toque não
+   tem hover, e sem um clique que FIXE o painel o menu seria inutilizável no
+   tablet do vendedor em visita.
+
+   O clique que fixa vale SÓ onde não há hover. No mouse ele atrapalhava: o
+   painel já estava aberto por ter o cursor em cima, o clique o prendia, e ele
+   ficava plantado sobre o conteúdo até alguém clicar fora ou apertar Esc.
+   Quem usa mouse não pede para prender um menu que já abre sozinho.
+
+   `(hover:hover) and (pointer:fine)` é a pergunta certa — "existe um cursor de
+   verdade?" — e não a largura da tela: notebook com tela sensível ao toque
+   responde sim aos dois, e é o comportamento desejado, porque ali o hover
+   funciona.
    ════════════════════════════════════════════════════════════════════════════ */
+const TEM_HOVER = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
 const fecharTrilho = () => $$('#rail .rail-item.pin').forEach(it => {
   it.classList.remove('pin');
   it.querySelector('.rail-btn')?.setAttribute('aria-expanded', 'false');
@@ -413,6 +423,9 @@ const fecharTrilho = () => $$('#rail .rail-item.pin').forEach(it => {
 $$('#rail .rail-item.has-menu > .rail-btn').forEach(btn => {
   btn.onclick = e => {
     e.stopPropagation();
+    /* No mouse, o hover do CSS já mostrou o painel e o esconde quando o cursor
+       sai. Fixar aqui só criaria o painel preso que o usuário reclamou. */
+    if(TEM_HOVER){ fecharTrilho(); return; }
     const item = btn.parentElement, abrir = !item.classList.contains('pin');
     fecharTrilho();
     item.classList.toggle('pin', abrir);
