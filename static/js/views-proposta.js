@@ -1046,10 +1046,10 @@ function linhaPosto(p, it, ix, cargos, benefs, congelada, ciPronto){
    <div class="sublabel">Benefícios da convenção</div>
    <div class="chips">${benefs.length ? benefs.map(b => `
     <label class="chipbox ${(it.beneficios || []).includes(b.id) ? 'on' : ''}"
-     ${b.condicional ? 'title="A convenção condiciona este benefício: só marque se o posto se enquadra."' : ''}>
+     ${condicional(b) ? 'title="A convenção condiciona este benefício: só marque se o posto se enquadra."' : ''}>
      <input type="checkbox" ${(it.beneficios || []).includes(b.id) ? 'checked' : ''} ${trava}
       data-mudar="alternarBeneficio" data-ix="${ix}" data-bid="${b.id}">${esc(b.nome)}
-     ${b.condicional ? '<span class="tag t-amber">se aplicável</span>' : ''}
+     ${condicional(b) ? '<span class="tag t-amber">se aplicável</span>' : ''}
      <span class="pv">${money0(b.valor)}${b.unid === 'dia' ? '/dia' : ''}</span></label>`).join('')
     : '<span style="font-size:12.5px;color:var(--muted)">Nenhum benefício cadastrado nesta CCT.</span>'}</div>
 
@@ -1347,13 +1347,13 @@ function painelResumo(p, c, encSoma, cct){
     ${c.insumosC ? linha('Materiais e insumos', moneyC(c.insumosC)) : ''}
     ${c.equipMensalC ? linha('Equipamentos', moneyC(c.equipMensalC)) : ''}
     ${linha('<b>Custo direto</b>', `<b>${moneyC(c.custoDiretoC)}</b>`)}
-    ${linha(`Administração e supervisão
-      <span style="color:var(--faint)" title="Custos indiretos: estrutura, supervisão e retaguarda que não estão em nenhum posto">${pctTxt(c.par.ci)}</span>`,
+    ${linha(`Administração e supervisão<span class="pc"
+      title="Custos indiretos: estrutura, supervisão e retaguarda que não estão em nenhum posto">${pctTxt(c.par.ci)}</span>`,
       moneyC(c.ciC))}
 
     <div class="sublabel">O que sai em imposto</div>
-    ${linha(`Impostos sobre o faturamento
-      <span style="color:var(--faint)">${pctTxt(c.T * 100, 2)}</span>`, moneyC(c.impostoC))}
+    ${linha(`Impostos sobre o faturamento<span class="pc">${pctTxt(c.T * 100, 2)}</span>`,
+      moneyC(c.impostoC))}
     <div style="font-size:11.5px;color:var(--muted);margin:-2px 0 4px;line-height:1.5">
      ${(c.trib?.detalhe || []).map(([nome]) => esc(String(nome).split(' ')[0])).join(' · ')}
     </div>
@@ -1410,6 +1410,20 @@ function painelResumo(p, c, encSoma, cct){
    </div></div>`;
 }
 
+
+/* Benefício que a convenção prevê mas NÃO é devido a todo empregado — o
+   auxílio-creche exige empresa com 30+ empregadas, sem creche própria, e é
+   devido à empregada-MÃE por filho de até 24 meses. Entrando por cabeça ele
+   somava R$ 486 por funcionário por mês.
+
+   Duas fontes, nesta ordem, e de propósito: a coluna `condicional` da tabela,
+   quando a migração já tiver rodado; e a lista de ids em
+   `configuracoes.beneficios_condicionais`, que funciona HOJE, sem DDL. A
+   segunda existe porque a migração ficou dias sem ser aplicada e o
+   auxílio-creche continuou entrando em toda proposta nova nesse meio-tempo. */
+const condicional = b => !!b && (b.condicional === true ||
+  String(CFG('beneficios_condicionais', '')).split(',')
+    .map(s => s.trim()).filter(Boolean).includes(String(b.id)));
 
 /* ── aba de documento e envio (4.5) ── */
 function abaDocumento(p, c, lead){
@@ -1757,7 +1771,7 @@ acoes({
          é devido à empregada-mãe, em empresa com 30+ mulheres, por filho de até
          24 meses. Entrando por cabeça ele somava 10,5% ao preço do posto. */
       qtd:1, adicionais:[], a20:20,
-      beneficios:benefs.filter(b => !b.condicional).map(b => b.id), obs:''}]
+      beneficios:benefs.filter(b => !condicional(b)).map(b => b.id), obs:''}]
       .concat(p.itens || []);
     await DB.upd('propostas', state.id, {itens});
     render();
