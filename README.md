@@ -4,6 +4,18 @@ CRM comercial para empresas de **facilities**: do lead ao contrato, com o motor
 de custo de mão de obra (convenção coletiva, adicionais legais, encargos,
 benefícios, escalas e turnos) e geração da proposta em PPT e PDF.
 
+## Por que existe
+
+É um projeto pessoal. A ideia nasceu na primeira empresa de facilities em que
+trabalhei: montar uma proposta comercial era abrir a convenção coletiva, somar
+adicional, encargo e benefício à mão numa planilha, copiar os números para o
+PowerPoint e torcer para nada ter mudado no meio do caminho — horas por
+proposta, e um erro de cálculo virava contrato no prejuízo.
+
+O Mizys CRM automatiza esse caminho de ponta a ponta: o custo sai da convenção
+e da escala, a proposta sai pronta em PPT e PDF, e o lead, a negociação e o
+contrato ficam no mesmo lugar. Não tem vínculo com nenhuma empresa.
+
 ---
 
 ## Como subir
